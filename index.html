@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20j">
+<meta name="x-app-ver" content="2026.09.20k">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -121,6 +121,9 @@ section{margin-top:14px}
 .lgc+.lgc{border-left:1px solid var(--line);padding-left:14px}
 .lgc span{font-size:10.5px;color:var(--txt3);display:block;margin-bottom:4px}
 .lgc b{font-size:19px;font-weight:800;letter-spacing:-.3px}
+.lgc .mvTag{font-size:10px;font-weight:700;margin-left:6px;padding:1px 5px;border-radius:4px;vertical-align:3px}
+.lgc .mvTag.lv{color:#16a34a;background:rgba(22,163,74,.13)}
+.lgc .mvTag.es{color:#d97706;background:rgba(217,119,6,.15)}
 .lgBar{display:flex;align-items:baseline;gap:7px;margin-top:13px;padding-top:11px;border-top:1px dashed var(--line)}
 .lgBar .t{font-size:10.5px;color:var(--txt3);flex-shrink:0}
 .lgBar b{font-size:16.5px;font-weight:800}
@@ -137,9 +140,6 @@ section{margin-top:14px}
 .lgE .vv{font-weight:700;font-size:12.5px;min-width:62px;text-align:right}
 .lgE .pp{min-width:52px;text-align:right;font-weight:700;font-size:11.5px}
 .lgE .pa{min-width:64px;text-align:right;font-weight:700;font-size:11.5px}
-.lgE .vv .tag{font-size:9px;font-weight:700;margin-left:3px;padding:0 3px;border-radius:3px;vertical-align:1px}
-.lgE .vv .tag.lv{color:#16a34a;background:rgba(22,163,74,.13)}
-.lgE .vv .tag.es{color:#d97706;background:rgba(217,119,6,.15)}
 .lgEh{display:flex;align-items:baseline;gap:8px;padding:0 0 6px;margin-bottom:2px;font-size:10px;color:var(--txt3);font-weight:600;border-bottom:1px solid rgba(40,90,160,.14)}
 .lgEh .nm{flex:1;min-width:0}
 .lgEh .sh{color:var(--txt3)}
@@ -380,7 +380,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
       <div class="lgTop">
         <div class="lg2">
           <div class="lgc"><span>累计投入（含佣金）</span><b id="lgCost">--</b></div>
-          <div class="lgc"><span>当前市值</span><b id="lgMv">--</b></div>
+          <div class="lgc"><span>当前市值</span><b id="lgMv">--</b><i id="lgMvTag" class="mvTag"></i></div>
         </div>
         <div class="lgBar"><span class="t">持有收益</span><b id="lgPnl">--</b><em id="lgPct"></em><span class="ann" id="lgAnn"></span></div>
         <div class="lgMeta" id="lgMeta">--</div>
@@ -835,6 +835,7 @@ function ledgerCalc(){
   const ann=(mv>0&&cfs.length>=2&&dayN>=30)?(xirr(cfs)*100):null;
   return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,navCost,
     lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,
+    mvLive:etfList.length?etfList.every(e=>e.live):false,
     /* 逐ETF汇总后的溢价率盈亏影响 */
     premPnl};
 }
@@ -842,6 +843,9 @@ function renderLedger(){
   const L=ledgerCalc(),up=L.pnl>=0,col=up?'var(--up)':'var(--down)';
   $('lgCost').textContent='¥'+fmt0(L.cost);
   $('lgMv').textContent='¥'+fmt0(L.mv);
+  const mvt=$('lgMvTag');
+  if(L.n){mvt.textContent=L.mvLive?'实时':'估算';mvt.className='mvTag '+(L.mvLive?'lv':'es');}
+  else{mvt.textContent='';mvt.className='mvTag';}
   const pe=$('lgPnl');pe.textContent=(up?'+':'-')+'¥'+fmt0(Math.abs(L.pnl));pe.style.color=col;
   const pc=$('lgPct');pc.textContent=(up?'+':'')+L.pct.toFixed(1)+'%';pc.style.color=col;
   const au=L.ann>=0;
@@ -852,7 +856,7 @@ function renderLedger(){
   $('holdCount').textContent=L.n?L.n+'笔':'';
   /* 分ETF汇总 */
   $('lgEtfs').innerHTML=L.etfList.length?(
-    `<div class="lgEh"><span class="nm">ETF</span><span class="sh" title="持仓份额">份额</span><span class="pp" title="该ETF累计持有收益率 = (市值−总投入)/总投入，含佣金、未年化">收益率</span><span class="pa" title="该ETF持有收益金额 = 市值 − 总投入，含佣金">收益金额</span><span class="vv" title="当前市值 = 份额 × 当前价；右侧标注 实时(行情价) 或 估算(按指数涨幅推算)">市值</span></div>`+
+    `<div class="lgEh"><span class="nm">ETF</span><span class="sh" title="持仓份额">份额</span><span class="pp" title="该ETF累计持有收益率 = (市值−总投入)/总投入，含佣金、未年化">收益率</span><span class="pa" title="该ETF持有收益金额 = 市值 − 总投入，含佣金">收益金额</span><span class="vv" title="当前市值 = 份额 × 当前价">市值</span></div>`+
     L.etfList.map(e=>{
       const u=e.pnl>=0;
       return `<div class="lgE">
@@ -860,7 +864,7 @@ function renderLedger(){
         <span class="sh">${fmt0(e.share)}份</span>
         <span class="pp ${u?'up':'dn'}">${u?'+':''}${e.pct.toFixed(1)}%</span>
         <span class="pa ${u?'up':'dn'}">${u?'+':'-'}¥${fmt0(Math.abs(e.pnl))}</span>
-        <span class="vv ${u?'up':'dn'}">¥${fmt0(e.mv)}<i class="tag ${e.live?'lv':'es'}">${e.live?'实时':'估算'}</i></span>
+        <span class="vv ${u?'up':'dn'}">¥${fmt0(e.mv)}</span>
       </div>`;
     }).join('')
   ):'';
