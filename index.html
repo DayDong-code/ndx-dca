@@ -19,8 +19,8 @@
 :root{
   --bg:linear-gradient(180deg,#d9e9fd 0%,#c1dbf6 100%);--card:linear-gradient(160deg,#f0f6ff 0%,#dbe9fb 100%);--card2:#e3eefc;--line:rgba(40,90,160,.16);
   --txt:#0f3358;--txt2:#5a7390;--txt3:#8aa0bd;
-  --brand:#2f6bff;--brand2:#38bdf8;--up:#ef4444;--down:#22c55e;
-  --g1:#22c55e;--g2:#84cc16;--g3:#eab308;--g4:#f97316;--g5:#ef4444;
+  --brand:#2f6bff;--brand2:#38bdf8;--up:#b83232;--down:#22c55e;
+  --g1:#22c55e;--g2:#84cc16;--g3:#eab308;--g4:#f97316;--g5:#b83232;
   --radius:16px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -42,7 +42,7 @@ header{position:sticky;top:0;z-index:50;background:#eaf3fd;border-bottom:1px sol
 @keyframes rot{to{transform:rotate(360deg)}}
 /* ===== 首页顶部标题（非固定，随页面滚动） ===== */
 .homeHead{display:flex;align-items:center;gap:10px;padding:12px 2px 2px}
-.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(47,107,255,.35)}
+.avatar{width:40px;height:40px;border-radius:9px;object-fit:cover;flex-shrink:0;box-shadow:0 3px 10px rgba(47,107,255,.35)}
 .homeTitle{font-size:19px;font-weight:800;color:var(--txt);letter-spacing:.3px}
 /* ===== 右上角圆形刷新按钮（固定浮层） ===== */
 .refreshFab{position:fixed;top:calc(env(safe-area-inset-top) + 14px);right:14px;z-index:80;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--brand);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(31,80,160,.18)}
@@ -245,7 +245,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
   <!-- ============ Tab 1 首页 ============ -->
   <div class="page active" id="page-home">
     <div class="homeHead">
-      <div class="avatar">Day</div>
+      <img class="avatar" src="data:image/jpeg;base64,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" alt="Day">
       <div class="homeTitle">Day的AI定投</div>
     </div>
     <section id="secQuote" class="card">
@@ -810,7 +810,7 @@ function renderLedger(){
   /* 溢价率面板 */
   if(L.premAvg!=null||L.premNow!=null){
     const pn=L.premNow!=null?L.premNow:1.5, pb=L.premAvg!=null?L.premAvg:1.5;
-    const pcol=v=>v>2.5?'#ef4444':v>1?'#f59e0b':'#22c55e';
+    const pcol=v=>v>2.5?'#b83232':v>1?'#f59e0b':'#22c55e';
     const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
       const w=Math.min(50,Math.abs(v)/5*50);
       const c=v>=0?pcol(v):'#22c55e';
@@ -1025,7 +1025,7 @@ function drawChart(hi){if(hi===undefined)hi=curHi;
       const label=chartRange>=36?dt.getUTCFullYear()+'':(mo===0?'1月':MON[mo].slice(0,2));
       ctx.fillText(label,X(i),H-9);}
   }
-  const upTrend=cs[cs.length-1]>=cs[0],mainC=upTrend?'#ef4444':'#22c55e';
+  const upTrend=cs[cs.length-1]>=cs[0],mainC=upTrend?'#b83232':'#22c55e';
   const grad=ctx.createLinearGradient(0,padT,0,padT+h);
   grad.addColorStop(0,upTrend?'rgba(239,68,68,.22)':'rgba(34,197,94,.22)');grad.addColorStop(1,'rgba(0,0,0,0)');
   ctx.beginPath();ctx.moveTo(X(0),Y(cs[0]));
@@ -1065,7 +1065,7 @@ function tipAt(clientX){
   curHi=i;drawChart(i);
   const v=chartData.cs[i],dt=dOf(chartData.ds[i]);
   const latest=chartData.cs[chartData.cs.length-1];
-  const pct=(latest-v)/v*100,pc=pct>=0?'#ef4444':'#22c55e';
+  const pct=(latest-v)/v*100,pc=pct>=0?'#b83232':'#22c55e';
   tip.style.display='block';
   tip.innerHTML=`${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}<br><b>${fmt(v)}</b> <span style="color:${pc}">${pct>=0?'+':''}${pct.toFixed(2)}%</span> <span style="color:#8b96ad;font-size:10px">至今</span>`;
   const tw=tip.offsetWidth;
