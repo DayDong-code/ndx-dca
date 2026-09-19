@@ -730,12 +730,18 @@ function etfCur(code,fallbackPrice,dn){
   }
   return{p:0,live:false,chp:0};
 }
-/* 当前溢价率：优先用东方财富净值(f168)精确算：现价÷净值−1
-   无净值时回退到「ETF涨跌幅 − 指数涨跌幅 + 基准溢价」推算 */
+/* 当前溢价率（同花顺口径）：现价 ÷ 实时估值净值 − 1
+   实时估值净值 = 最新单位净值 × (1 + 纳指100当日涨跌幅%)
+   QDII 跨境 ETF 无盘中官方 IOPV，溢价率按 T-1 单位净值叠加当日标的涨跌估算，
+   与同花顺/雪球/集思录显示一致。无净值时回退「ETF涨跌 − 指数涨跌 + 基准」推算 */
 function curPrem(code,basePrem,dn){
   const q=etfQ[code];
   if(!q||!(q.p>0))return null;
-  if(etfIO[code]&&etfIO[code]>0)return q.p/etfIO[code]*100-100; /* 精确溢价 */
+  if(q.nav>0){
+    const idxChp=isFinite(+quote.chp)?+quote.chp:0;   /* 纳指100今日涨跌幅% */
+    const estNav=q.nav*(1+idxChp/100);                 /* 实时估值净值（同花顺 IOPV 口径） */
+    if(estNav>0)return q.p/estNav*100-100;
+  }
   const chpIdx=+quote.chp||0;               /* 指数今日涨跌幅% */
   const diff=q.chp-chpIdx;                   /* ETF超额涨跌 = 溢价率变化 */
   const base=(basePrem!=null&&isFinite(basePrem))?basePrem:1.5; /* 无基准用常见值 */
@@ -782,7 +788,7 @@ function ledgerCalc(){
   rows.forEach(r=>{if(r.premBuy!=null){wPrem+=r.premBuy*r.cost;wSum+=r.cost}if(r.premNow!=null){pNowSum+=r.premNow;pNowN++}});
   const premAvg=wSum>0?wPrem/wSum:null;
   const premNow=pNowN>0?pNowSum/pNowN:null;
-  /* 溢价率面板固定展示：广发纳指(159941)实时溢价率 = 现价÷东财最新净值−1 */
+  /* 溢价率面板固定展示：广发纳指(159941)实时溢价率 = 现价÷实时估值净值−1（同花顺 QDII 口径） */
   const gfPrem=curPrem(PREM_ETF,null,0);
   return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,
     lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,gfPrem,
@@ -830,7 +836,7 @@ function renderLedger(){
         L.premPnl!=null
           ? `溢价率影响：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
           : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
-      } · 广发纳指(159941) 当前溢价=现价÷东财最新净值−1（QDII ETF 用T-1净值，券商/同花顺同口径）</div>`;
+      } · 广发纳指(159941) 当前溢价=现价÷实时估值净值−1（实时估值净值=单位净值×(1+纳指100当日涨跌)，同花顺/集思录同口径）</div>`;
   }else{
     $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
   }
@@ -1172,38 +1178,17 @@ function applyQuote(f){
 function applyEtfQ(code,f){
   const p=+f[3];if(!(p>0))return false;
   const chp=+f[32];
+  const nav=+f[81];  /* 单位净值：腾讯行情第81字段，已与东方财富基金净值(159941=1.4850)交叉核对一致 */
   etfQ[code]={p,pc:+f[4],o:+f[5],chp:isFinite(chp)?chp:0,
-    ch:+f[31],h:+f[33],l:+f[34],name:f[1],t:f[30]};
+    ch:+f[31],h:+f[33],l:+f[34],name:f[1],t:f[30],
+    nav:(nav>0&&nav<p*2)?nav:0};
   return true;
 }
-/* 东方财富实时净值：f168 为最新单位净值（QDII ETF 即 T-1 净值，券商/集思录口径）
-   溢价率=现价÷净值−1，比涨跌幅差推算更精确。
-   手机浏览器直连 push2.eastmoney.com（JSONP，无 CORS 限制） */
-let etfIO={};
-function secidOf(code){
-  if(/^5/.test(code))return '1.'+code;
-  if(/^1/.test(code))return '0.'+code;
-  return '';
-}
-function loadEtfIOPV(){
-  const def=['513100','513300','159941','513110'];
-  const codes=[...new Set([...def,...recs.map(r=>r.code)].filter(c=>c&&/^[015]/.test(c)))];
-  const ids=codes.map(secidOf).filter(Boolean);
-  ids.forEach(id=>{
-    const cb='emio'+Math.random().toString(36).slice(2);
-    const s=document.createElement('script');
-    window[cb]=(d)=>{
-      try{const j=d&&d.data;
-        if(j&&j.f168>0&&j.f57)etfIO[j.f57]=+j.f168;
-      }catch(e){}
-      delete window[cb];s.remove();
-      renderLedger();
-    };
-    s.onerror=()=>{delete window[cb];s.remove();};
-    s.src='https://push2.eastmoney.com/api/qt/stock/get?secid='+id+'&fields=f43,f57,f58,f168&ut=fa5fd1946e6f0e1e2ca7e8a4e6e0be9b&fltt=2&cb='+cb;
-    document.head.appendChild(s);
-  });
-}
+/* 溢价率净值来源说明（已修正）：
+   旧版误用东方财富 f168（实际是换手率，159941 返回 2.94）当净值，导致溢价率算成"现价÷换手率"的垃圾值。
+   现改用腾讯行情第81字段 = 单位净值（159941=1.4850，已与东方财富基金净值接口交叉核对一致），
+   按同花顺 QDII 口径算「实时估值净值 = 单位净值×(1+纳指100当日涨跌)」，溢价率=现价÷实时估值净值−1。
+   无需再直连东方财富，纯客户端腾讯行情即可，无 CORS 问题。 */
 /* 计算"场内代码 → 腾讯行情符号"：51xxxx 沪市，15xxxx 深市 */
 function symOf(code){
   if(!code)return '';
@@ -1241,7 +1226,7 @@ function refreshAll(manual){
     ico.classList.remove('spin');
     if(manual)toast(ok?'行情已更新至最新':'网络刷新失败，当前显示快照数据');
   });
-  loadEtfIOPV();loadJin10();loadSina();
+  loadJin10();loadSina();
 }
 /* ================= Tab 切换 ================= */
 const TABS={home:['纳指100指数定投','NASDAQ 100 · 实时行情'],news:['财经资讯','金十数据 · 新浪财经'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本 · 复利计算']};
