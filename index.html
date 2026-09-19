@@ -17,7 +17,7 @@
 <title>纳指100指数定投工作台</title>
 <style>
 :root{
-  --bg:linear-gradient(180deg,#eaf3fd 0%,#dbeafb 100%);--card:#ffffff;--card2:#eef5fe;--line:rgba(40,90,160,.14);
+  --bg:linear-gradient(180deg,#d9e9fd 0%,#c1dbf6 100%);--card:linear-gradient(160deg,#f0f6ff 0%,#dbe9fb 100%);--card2:#e3eefc;--line:rgba(40,90,160,.16);
   --txt:#0f3358;--txt2:#5a7390;--txt3:#8aa0bd;
   --brand:#2f6bff;--brand2:#38bdf8;--up:#ef4444;--down:#22c55e;
   --g1:#22c55e;--g2:#84cc16;--g3:#eab308;--g4:#f97316;--g5:#ef4444;
@@ -53,13 +53,13 @@ header{position:sticky;top:0;z-index:50;background:#eaf3fd;border-bottom:1px sol
 .page.active{display:block;animation:fade .22s ease}
 @keyframes fade{from{opacity:.3;transform:translateY(5px)}}
 section{margin-top:14px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 4px 20px rgba(31,80,160,.10)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 6px 22px rgba(31,80,160,.14),inset 0 1px 0 rgba(255,255,255,.75)}
 .card h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:12px;flex-wrap:wrap}
 .card h3 .tt{white-space:nowrap;flex-shrink:0}
 .card h3 .sub{font-size:11px;color:var(--txt3);font-weight:400}
 .card h3 .right{margin-left:auto;font-size:11px;color:var(--txt2);font-weight:400;white-space:nowrap;flex-shrink:0}
 /* ===== 底部Tab栏 ===== */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(232,242,252,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:5px 0 calc(5px + env(safe-area-inset-bottom))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);background:linear-gradient(180deg,rgba(216,235,253,.92),rgba(193,219,246,.98));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:5px 0 calc(5px + env(safe-area-inset-bottom))}
 .tabbar button{background:none;border:none;color:var(--txt3);font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 0 3px;font-family:inherit;transition:color .2s}
 .tabbar button svg{width:23px;height:23px;stroke-width:1.8}
 .tabbar button.on{color:var(--brand)}
@@ -220,7 +220,7 @@ canvas{width:100%;display:block;border-radius:10px}
 /* ===== 弹层 ===== */
 .mask{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;display:none;align-items:flex-end;justify-content:center}
 .mask.show{display:flex}
-.modal{background:#ffffff;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 18px calc(20px + env(safe-area-inset-bottom));animation:up .25s cubic-bezier(.2,.8,.2,1)}
+.modal{background:linear-gradient(180deg,#eef5ff,#dcebfb);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 18px calc(20px + env(safe-area-inset-bottom));animation:up .25s cubic-bezier(.2,.8,.2,1);box-shadow:0 -8px 30px rgba(31,80,160,.18)}
 @keyframes up{from{transform:translateY(40px);opacity:.4}}
 .modal h4{font-size:15px;margin-bottom:14px;display:flex;justify-content:space-between}
 .modal h4 .x{color:var(--txt3);font-size:20px;padding:2px 8px}
