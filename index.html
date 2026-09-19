@@ -162,6 +162,9 @@ section{margin-top:14px}
 .fCalc span{display:block;font-size:9.5px;color:var(--txt3);margin-bottom:3px}
 .fCalc b{font-size:13px;font-weight:700}
 .btn{display:block;width:100%;text-align:center;padding:11px;border-radius:12px;border:1px dashed rgba(79,124,255,.4);color:var(--brand);font-size:13px;font-weight:600;margin-top:12px;background:rgba(79,124,255,.05)}
+.bkRow{display:flex;gap:9px;margin-top:10px}
+.btnSm{flex:1;text-align:center;padding:9px;border-radius:11px;border:1px solid rgba(79,124,255,.35);color:var(--brand);font-size:12.5px;font-weight:600;background:rgba(79,124,255,.05)}
+.btnSm:active{background:rgba(79,124,255,.14)}
 .btn:active{opacity:.6}
 /* ===== 走势图 ===== */
 .tabs{display:flex;gap:6px;margin-bottom:10px}
@@ -367,6 +370,11 @@ footer .src a{color:var(--txt2);margin:0 3px}
       </div>
       <div id="holdList"></div>
       <button class="btn" id="btnAddHold">＋ 记一笔买入</button>
+      <div class="bkRow">
+        <button class="btnSm" id="btnExport">⬇ 导出备份</button>
+        <button class="btnSm" id="btnImport">⬆ 导入备份</button>
+        <input type="file" id="fileLedger" accept="application/json,.json" hidden>
+      </div>
       <div class="cnote" style="margin-top:12px"><b>指标说明</b><br>
       · <b>溢价率</b>：场内价相对基金净值的贵贱。正=溢价（买贵了），负=折价（买便宜了）。场内纳指ETF常有 1%~3% 溢价，溢价高时买入相当于多付钱。<br>
       · <b>成本价</b>：实际成交价，市值 = 份额 × 当前价，不靠指数估算。<br>
@@ -675,6 +683,32 @@ if(!recs){ /* 首次使用：预置示例，可删 */
   ];
 }
 function saveRecs(){try{localStorage.setItem(HKEY,JSON.stringify(recs))}catch(e){}}
+/* 导出/导入备份：账本存在浏览器 localStorage，换设备/清缓存/重装PWA后会丢，
+   用文件备份可随时恢复、也能跨设备迁移 */
+function exportLedger(){
+  if(!recs.length){toast('账本还是空的，先记一笔');return}
+  const data={app:'ndx100-dca',ver:2,exportedAt:new Date().toISOString(),recs:recs};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='ndx-ledger-'+todayStr().replace(/-/g,'')+'.json';
+  a.click();URL.revokeObjectURL(a.href);toast('已导出 '+recs.length+' 笔');
+}
+function importLedger(file){
+  const reader=new FileReader();
+  reader.onload=()=>{try{
+    const j=JSON.parse(reader.result);
+    const arr=Array.isArray(j)?j:(j&&Array.isArray(j.recs)?j.recs:null);
+    if(!arr||!arr.length){toast('备份里没有账本数据');return}
+    const good=arr.filter(r=>r&&r.d&&(r.code||r.name));
+    if(!good.length){toast('数据格式不对');return}
+    const key=r=>`${r.d}|${r.code||''}|${r.share||0}|${r.amt||0}`;
+    const seen=new Set(recs.map(key));let add=0;
+    good.forEach(r=>{const k=key(r);if(!seen.has(k)){seen.add(k);recs.push(r);add++}});
+    saveRecs();renderLedger();toast(`已合并 ${add} 笔（重复已跳过）`);
+  }catch(e){toast('解析失败，不是有效备份')}};
+  reader.readAsText(file);
+}
+$('fileLedger').addEventListener('change',e=>{const f=e.target.files[0];if(f)importLedger(f);e.target.value='';});
 function dayNum(ds){return Math.floor(Date.parse(ds)/864e5)}
 function idxAt(dn){ /* 买入日纳指收盘价：非交易日取前一交易日 */
   if(dn<=days[0])return{p:closes[0],edge:dn<days[0]};
@@ -826,6 +860,8 @@ document.addEventListener('click',e=>{
   const row=e.target.closest('.lrow');
   if(row){editIdx=+row.dataset.i;openModal(recs[editIdx]);return}
   if(e.target.closest('#btnAddHold')){editIdx=-1;openModal(null)}
+  if(e.target.closest('#btnExport')){exportLedger();return}
+  if(e.target.closest('#btnImport')){$('fileLedger').click();return}
   if(e.target.id==='mClose'||e.target.id==='holdMask'){$('holdMask').classList.remove('show');unlockScroll()}
   if(e.target.closest('#mOk')){saveModal()}
 });
