@@ -19,8 +19,8 @@
 :root{
   --bg:linear-gradient(180deg,#d9e9fd 0%,#c1dbf6 100%);--card:linear-gradient(160deg,#f0f6ff 0%,#dbe9fb 100%);--card2:#e3eefc;--line:rgba(40,90,160,.16);
   --txt:#0f3358;--txt2:#5a7390;--txt3:#8aa0bd;
-  --brand:#2f6bff;--brand2:#38bdf8;--up:#d24d6e;--down:#22c55e;
-  --g1:#22c55e;--g2:#84cc16;--g3:#eab308;--g4:#f97316;--g5:#d24d6e;
+  --brand:#2f6bff;--brand2:#38bdf8;--up:#e85a86;--down:#22c55e;
+  --g1:#22c55e;--g2:#84cc16;--g3:#eab308;--g4:#f97316;--g5:#e85a86;
   --radius:16px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -810,7 +810,7 @@ function renderLedger(){
   /* 溢价率面板 */
   if(L.premAvg!=null||L.premNow!=null){
     const pn=L.premNow!=null?L.premNow:1.5, pb=L.premAvg!=null?L.premAvg:1.5;
-    const pcol=v=>v>2.5?'#d24d6e':v>1?'#f59e0b':'#22c55e';
+    const pcol=v=>v>2.5?'#e85a86':v>1?'#f59e0b':'#22c55e';
     const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
       const w=Math.min(50,Math.abs(v)/5*50);
       const c=v>=0?pcol(v):'#22c55e';
@@ -1025,7 +1025,7 @@ function drawChart(hi){if(hi===undefined)hi=curHi;
       const label=chartRange>=36?dt.getUTCFullYear()+'':(mo===0?'1月':MON[mo].slice(0,2));
       ctx.fillText(label,X(i),H-9);}
   }
-  const upTrend=cs[cs.length-1]>=cs[0],mainC=upTrend?'#d24d6e':'#22c55e';
+  const upTrend=cs[cs.length-1]>=cs[0],mainC=upTrend?'#e85a86':'#22c55e';
   const grad=ctx.createLinearGradient(0,padT,0,padT+h);
   grad.addColorStop(0,upTrend?'rgba(239,68,68,.22)':'rgba(34,197,94,.22)');grad.addColorStop(1,'rgba(0,0,0,0)');
   ctx.beginPath();ctx.moveTo(X(0),Y(cs[0]));
@@ -1065,7 +1065,7 @@ function tipAt(clientX){
   curHi=i;drawChart(i);
   const v=chartData.cs[i],dt=dOf(chartData.ds[i]);
   const latest=chartData.cs[chartData.cs.length-1];
-  const pct=(latest-v)/v*100,pc=pct>=0?'#d24d6e':'#22c55e';
+  const pct=(latest-v)/v*100,pc=pct>=0?'#e85a86':'#22c55e';
   tip.style.display='block';
   tip.innerHTML=`${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}<br><b>${fmt(v)}</b> <span style="color:${pc}">${pct>=0?'+':''}${pct.toFixed(2)}%</span> <span style="color:#8b96ad;font-size:10px">至今</span>`;
   const tw=tip.offsetWidth;
