@@ -1,8 +1,8 @@
 /* 纳指100定投工作台 Service Worker
- * 策略：HTML 导航请求 network-first（每次都尝试拿最新页面，部署后立即生效）；
+ * 策略：HTML 导航请求每次都带时间戳绕过 CDN/浏览器缓存，强制拿最新页面（部署后立即生效）；
  *       离线时回退到缓存。静态资源 cache-first。
  * 这样添加到主屏幕的 PWA 打开即最新，无需删了重装图标。 */
-const CACHE = 'ndx-dca-v2';
+const CACHE = 'ndx-dca-v3';
 const HTML = '/ndx-dca/';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
@@ -12,7 +12,14 @@ self.addEventListener('activate', e => {
     const keys = await caches.keys();
     await Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
+    // 立即让所有已打开页面刷新到最新版，避免停留在旧缓存页
+    const cls = await self.clients.matchAll({ includeUncontrolled: true });
+    cls.forEach(c => c.postMessage({ type: 'RELOAD' }));
   })());
+});
+
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'RELOAD') { try { self.skipWaiting(); } catch (_) {} }
 });
 
 self.addEventListener('fetch', e => {
@@ -20,11 +27,12 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // 导航请求（HTML 文档）：网络优先，失败回退缓存
+  // 导航请求（HTML 文档）：带时间戳绕过缓存，强制最新；失败回退缓存
   if (req.mode === 'navigate' || url.pathname === HTML || url.pathname.endsWith('/')) {
     e.respondWith((async () => {
+      const busted = url.origin + url.pathname + (url.search ? '&' : '?') + '_=' + Date.now();
       try {
-        const net = await fetch(req, { cache: 'no-store' });
+        const net = await fetch(busted, { cache: 'no-store' });
         const c = await caches.open(CACHE);
         c.put(req, net.clone());
         return net;
