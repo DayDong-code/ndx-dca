@@ -665,6 +665,7 @@ function animateBars(){
 ================================================================ */
 const HKEY='ndx100_ledger_v2';
 const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','159941':'纳指ETF广发','513110':'纳指ETF华泰柏瑞'};
+const PREM_ETF='159941'; /* 溢价率面板固定展示的ETF：广发纳指 */
 /* ETF 实时行情缓存：code -> {p, pc, chp, t} */
 let etfQ={};
 /* 换算系数：场内ETF价格 ÷ 纳指100点位，用于反推净值算溢价率（用最近成交价与指数同步校准） */
@@ -781,10 +782,12 @@ function ledgerCalc(){
   rows.forEach(r=>{if(r.premBuy!=null){wPrem+=r.premBuy*r.cost;wSum+=r.cost}if(r.premNow!=null){pNowSum+=r.premNow;pNowN++}});
   const premAvg=wSum>0?wPrem/wSum:null;
   const premNow=pNowN>0?pNowSum/pNowN:null;
+  /* 溢价率面板固定展示：广发纳指(159941)实时溢价率 = 现价÷东财最新净值−1 */
+  const gfPrem=curPrem(PREM_ETF,null,0);
   return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,
-    lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,
-    /* 溢价率造成的盈亏：份额 × 当前价 × (当前溢价-买入溢价)/100 */
-    premPnl:(premAvg!=null&&premNow!=null)?mv*(premNow-premAvg)/100:null};
+    lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,gfPrem,
+    /* 溢价率造成的盈亏：市值 × (广发纳指当前溢价-买入均值溢价)/100 */
+    premPnl:(premAvg!=null&&gfPrem!=null)?mv*(gfPrem-premAvg)/100:null};
 }
 function renderLedger(){
   const L=ledgerCalc(),up=L.pnl>=0,col=up?'var(--up)':'var(--down)';
@@ -808,8 +811,8 @@ function renderLedger(){
     </div>`;
   }).join(''):'';
   /* 溢价率面板 */
-  if(L.premAvg!=null||L.premNow!=null){
-    const pn=L.premNow!=null?L.premNow:1.5, pb=L.premAvg!=null?L.premAvg:1.5;
+  if(L.premAvg!=null||L.gfPrem!=null||L.premNow!=null){
+    const pn=L.gfPrem!=null?L.gfPrem:(L.premNow!=null?L.premNow:1.5), pb=L.premAvg!=null?L.premAvg:1.5;
     const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
     const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
       const w=Math.min(50,Math.abs(v)/5*50);
@@ -817,17 +820,17 @@ function renderLedger(){
       return `<div class="pmBar"><u style="${v>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`};background:${c}"></u><i></i></div>`;
     };
     $('pmBox').innerHTML=`
-      <div class="pmRow"><span class="k">买入均值</span>
+      <div class="pmRow"><span class="k">买入均值溢价</span>
         <span class="v" style="color:${pcol(pb)}">${pb>=0?'+':''}${pb.toFixed(2)}%</span>${bar(pb)}
       </div>
-      <div class="pmRow"><span class="k">当前溢价</span>
+      <div class="pmRow"><span class="k">广发纳指溢价</span>
         <span class="v" style="color:${pcol(pn)}">${pn>=0?'+':''}${pn.toFixed(2)}%</span>${bar(pn)}
       </div>
       <div class="lgMeta" style="margin-top:2px">${
         L.premPnl!=null
           ? `溢价率影响：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
           : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
-      } · 当前溢价=现价÷东财最新净值−1（QDII ETF 用T-1净值，券商同口径）</div>`;
+      } · 广发纳指(159941) 当前溢价=现价÷东财最新净值−1（QDII ETF 用T-1净值，券商/同花顺同口径）</div>`;
   }else{
     $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
   }
