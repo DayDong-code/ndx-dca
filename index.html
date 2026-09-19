@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20i">
+<meta name="x-app-ver" content="2026.09.20j">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -137,6 +137,9 @@ section{margin-top:14px}
 .lgE .vv{font-weight:700;font-size:12.5px;min-width:62px;text-align:right}
 .lgE .pp{min-width:52px;text-align:right;font-weight:700;font-size:11.5px}
 .lgE .pa{min-width:64px;text-align:right;font-weight:700;font-size:11.5px}
+.lgE .vv .tag{font-size:9px;font-weight:700;margin-left:3px;padding:0 3px;border-radius:3px;vertical-align:1px}
+.lgE .vv .tag.lv{color:#16a34a;background:rgba(22,163,74,.13)}
+.lgE .vv .tag.es{color:#d97706;background:rgba(217,119,6,.15)}
 .lgEh{display:flex;align-items:baseline;gap:8px;padding:0 0 6px;margin-bottom:2px;font-size:10px;color:var(--txt3);font-weight:600;border-bottom:1px solid rgba(40,90,160,.14)}
 .lgEh .nm{flex:1;min-width:0}
 .lgEh .sh{color:var(--txt3)}
@@ -849,7 +852,7 @@ function renderLedger(){
   $('holdCount').textContent=L.n?L.n+'笔':'';
   /* 分ETF汇总 */
   $('lgEtfs').innerHTML=L.etfList.length?(
-    `<div class="lgEh"><span class="nm">ETF</span><span class="sh" title="持仓份额">份额</span><span class="pp" title="该ETF累计持有收益率 = (市值−总投入)/总投入，含佣金、未年化">收益率</span><span class="pa" title="该ETF持有收益金额 = 市值 − 总投入，含佣金">收益金额</span><span class="vv" title="当前市值 = 份额 × 当前价">市值</span></div>`+
+    `<div class="lgEh"><span class="nm">ETF</span><span class="sh" title="持仓份额">份额</span><span class="pp" title="该ETF累计持有收益率 = (市值−总投入)/总投入，含佣金、未年化">收益率</span><span class="pa" title="该ETF持有收益金额 = 市值 − 总投入，含佣金">收益金额</span><span class="vv" title="当前市值 = 份额 × 当前价；右侧标注 实时(行情价) 或 估算(按指数涨幅推算)">市值</span></div>`+
     L.etfList.map(e=>{
       const u=e.pnl>=0;
       return `<div class="lgE">
@@ -857,7 +860,7 @@ function renderLedger(){
         <span class="sh">${fmt0(e.share)}份</span>
         <span class="pp ${u?'up':'dn'}">${u?'+':''}${e.pct.toFixed(1)}%</span>
         <span class="pa ${u?'up':'dn'}">${u?'+':'-'}¥${fmt0(Math.abs(e.pnl))}</span>
-        <span class="vv ${u?'up':'dn'}">¥${fmt0(e.mv)}</span>
+        <span class="vv ${u?'up':'dn'}">¥${fmt0(e.mv)}<i class="tag ${e.live?'lv':'es'}">${e.live?'实时':'估算'}</i></span>
       </div>`;
     }).join('')
   ):'';
