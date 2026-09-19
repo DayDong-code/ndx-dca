@@ -425,18 +425,12 @@ footer .src a{color:var(--txt2);margin:0 3px}
     <div class="fi"><label>成交日期</label><input id="fDate" type="date"></div>
     <div class="fi"><label>买入的ETF</label><select id="fEtf">
       <option value="513100">513100 · 纳指ETF国泰</option>
-      <option value="513300">513300 · 纳指ETF华夏</option>
+      <option value="513300">513300 · 纳斯达克ETF华夏</option>
       <option value="159941">159941 · 纳指ETF广发</option>
       <option value="513110">513110 · 纳指ETF华泰柏瑞</option>
-      <option value="159632">159632 · 纳指ETF华安</option>
-      <option value="159659">159659 · 纳指ETF招商</option>
-      <option value="159501">159501 · 纳指ETF嘉实</option>
-      <option value="159513">159513 · 纳指ETF大成</option>
-      <option value="513390">513390 · 纳指ETF博时</option>
-      <option value="513870">513870 · 纳指ETF富国</option>
-      <option value="159696">159696 · 纳指ETF易方达</option>
-      <option value="159660">159660 · 纳指ETF汇添富</option>
+      <option value="">其他 / 自定义</option>
     </select></div>
+    <div class="fi" id="fCustom" style="display:none"><label>ETF名称（可含代码）</label><input id="fName" placeholder="如：纳指100联接E 016055" maxlength="24"></div>
     <div class="fi2">
       <div class="fi"><label>成交价（元）</label><input id="fPrice" type="number" step="0.001" placeholder="2.266"></div>
       <div class="fi"><label>买入份额（份）</label><input id="fShare" type="number" step="1" placeholder="440"></div>
@@ -670,9 +664,7 @@ function animateBars(){
    计算：成本 = amt + fee ；市值 = share × 当前价 ；盈亏 = 市值 - 成本
 ================================================================ */
 const HKEY='ndx100_ledger_v2';
-const ETFS={'513100':'纳指ETF国泰','513300':'纳指ETF华夏','159941':'纳指ETF广发','513110':'纳指ETF华泰柏瑞',
-  '159632':'纳指ETF华安','159659':'纳指ETF招商','159501':'纳指ETF嘉实','159513':'纳指ETF大成',
-  '513390':'纳指ETF博时','513870':'纳指ETF富国','159696':'纳指ETF易方达','159660':'纳指ETF汇添富'};
+const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','159941':'纳指ETF广发','513110':'纳指ETF华泰柏瑞'};
 const PREM_ETF='159941'; /* 溢价率面板固定展示的ETF：广发纳指 */
 /* ETF 实时行情缓存：code -> {p, pc, chp, t} */
 let etfQ={};
@@ -824,28 +816,24 @@ function renderLedger(){
   }).join(''):'';
   /* 溢价率面板 */
   if(L.premAvg!=null||L.gfPrem!=null||L.premNow!=null){
-    const pn=L.gfPrem!=null?L.gfPrem:(L.premNow!=null?L.premNow:null);
-    const pb=L.premAvg!=null?L.premAvg:null;
+    const pn=L.gfPrem!=null?L.gfPrem:(L.premNow!=null?L.premNow:1.5), pb=L.premAvg!=null?L.premAvg:1.5;
     const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
-    const bar=v=>{ /* 溢价率条：0~5%，中点2.5%；无值时显示空 */
-      if(v==null)return '';
+    const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
       const w=Math.min(50,Math.abs(v)/5*50);
       const c=v>=0?pcol(v):'#22c55e';
       return `<div class="pmBar"><u style="${v>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`};background:${c}"></u><i></i></div>`;
     };
-    const fmtP=v=> v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
     $('pmBox').innerHTML=`
       <div class="pmRow"><span class="k">买入均值溢价</span>
-        <span class="v" style="color:${pb==null?'#94a3b8':pcol(pb)}">${fmtP(pb)}</span>${bar(pb)}
+        <span class="v" style="color:${pcol(pb)}">${pb>=0?'+':''}${pb.toFixed(2)}%</span>${bar(pb)}
       </div>
       <div class="pmRow"><span class="k">广发纳指溢价</span>
-        <span class="v" style="color:${pn==null?'#94a3b8':pcol(pn)}">${fmtP(pn)}</span>${bar(pn)}
+        <span class="v" style="color:${pcol(pn)}">${pn>=0?'+':''}${pn.toFixed(2)}%</span>${bar(pn)}
       </div>
       <div class="lgMeta" style="margin-top:2px">${
-        pn==null?'<b style="color:#ef4444">行情未刷新，点右上角圆形按钮刷新</b> · ':
-        (L.premPnl!=null
+        L.premPnl!=null
           ? `溢价率影响：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
-          : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响')
+          : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
       } · 广发纳指(159941) 当前溢价=现价÷最新单位净值−1（静态净值口径，与同花顺显示一致）</div>`;
   }else{
     $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
@@ -908,6 +896,8 @@ function openModal(r){
   $('fDate').value=r?r.d:todayStr();$('fDate').max=todayStr();
   const known=r&&ETFS[r.code]?r.code:'';
   $('fEtf').value=known||(r?'':'159941');
+  $('fCustom').style.display=known?'none':'';
+  $('fName').value=r&&!known?r.name:'';
   $('fPrice').value=r?r.price:'';
   $('fShare').value=r?r.share:'';
   $('fAmt').value=r?r.amt:'';
@@ -929,6 +919,7 @@ function openModal(r){
 }
 $('fEtf').addEventListener('change',()=>{
   const code=$('fEtf').value;
+  $('fCustom').style.display=code?'none':'';
   if(code&&etfQ[code]&&etfQ[code].p>0){
     $('fPrice').value=etfQ[code].p;
     const cp=curPrem(code,null,0);
@@ -991,7 +982,7 @@ function saveModal(){
   }
   if(prem!==null&&!isFinite(prem)){toast('溢价率格式有误');return}
   const code=$('fEtf').value;
-  const name=code?ETFS[code]:'自定义ETF';
+  const name=code?ETFS[code]:($('fName').value.trim()||'自定义ETF');
   const r={d,code,name,price:+px.toFixed(3),share:Math.round(sh),amt:+amt.toFixed(2),fee:+fee.toFixed(2),
     prem:prem===null?null:+prem.toFixed(2),note};
   if(editIdx>=0)recs[editIdx]=r;else recs.push(r);
@@ -1205,7 +1196,7 @@ function symOf(code){
 }
 function loadTencent(cb){
   /* 收集需要拉取的代码：指数 + 持仓里出现的所有场内ETF */
-  const codes=[...new Set([...Object.keys(ETFS),...recs.map(r=>r.code)]).filter(c=>c&&symOf(c))];
+  const codes=[...new Set([...['513100','513300','159941','513110'],...recs.map(r=>r.code)]).filter(c=>c&&symOf(c))];
   const list=['usNDX',...codes.map(symOf)];
   const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
   const s=document.createElement('script');
