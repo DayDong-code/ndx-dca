@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.19e">
+<meta name="x-app-ver" content="2026.09.19f">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -671,16 +671,21 @@ const PREM_ETF='159941'; /* 溢价率面板固定展示的ETF：广发纳指 */
 let etfQ={};
 /* 换算系数：场内ETF价格 ÷ 纳指100点位，用于反推净值算溢价率（用最近成交价与指数同步校准） */
 let etfCal={};
-let recs=[];try{recs=JSON.parse(localStorage.getItem(HKEY)||'null')||null}catch(e){}
+let recs=[];
+try{
+  const raw=localStorage.getItem(HKEY);
+  recs=raw?JSON.parse(raw):null;
+}catch(e){recs=null;}
+if(!Array.isArray(recs))recs=null;
 /* 兼容旧版 v1 数据（只有 amt 的老记录）：迁移成新结构，价格用当日指数换算 */
 if(!recs){
   let old=null;try{old=JSON.parse(localStorage.getItem('ndx100_ledger_v1')||'null')}catch(e){}
-  if(old&&old.length){
+  if(Array.isArray(old)&&old.length){
     recs=old.map(r=>({d:r.d,code:r.code,name:r.name||ETFS[r.code]||'自定义ETF',
       price:+(r.amt/1000).toFixed(3)||1,share:1000,amt:r.amt,fee:0,prem:null,note:r.note||''}));
   }
 }
-if(!recs){ /* 首次使用：预置示例，可删 */
+if(!Array.isArray(recs)){ /* 首次使用：预置示例，可删 */
   recs=[
     {d:'2026-06-15',code:'513100',name:'纳指ETF国泰',price:2.108,share:470,amt:990.76,fee:0,prem:1.42,note:'示例·发薪日'},
     {d:'2026-07-15',code:'513100',name:'纳指ETF国泰',price:2.185,share:450,amt:983.25,fee:0,prem:2.05,note:'示例'},
@@ -1202,7 +1207,8 @@ function loadTencent(cb){
      中都可靠触发 onload/onerror/ontimeout 回调；并用 overrideMimeType('text/plain; charset=gbk')
      由浏览器原生解码中文，彻底绕开 TextDecoder/AbortController 兼容性坑。 */
   try{
-    const codes=[...new Set([...['513100','513300','159941','513110'],...recs.map(r=>r.code)]).filter(c=>c&&symOf(c))];
+    const recsArr=Array.isArray(recs)?recs:[];
+    const codes=[...new Set([...['513100','513300','159941','513110'],...recsArr.map(r=>r.code)]).filter(c=>c&&symOf(c))];
     const list=['usNDX',...codes.map(symOf)];
     const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
     const xhr=new XMLHttpRequest();
