@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20c">
+<meta name="x-app-ver" content="2026.09.20d">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -671,7 +671,6 @@ const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','513390'
 (function(){const sel=document.getElementById('fEtf');if(!sel)return;
 for(const code in ETFS){const o=document.createElement('option');o.value=code;o.textContent=code+' · '+ETFS[code];sel.appendChild(o);}
 })();
-const PREM_ETF='159941'; /* 溢价率面板固定展示的ETF：广发纳指 */
 /* ETF 实时行情缓存：code -> {p, pc, chp, t} */
 let etfQ={};
 /* 换算系数：场内ETF价格 ÷ 纳指100点位，用于反推净值算溢价率（用最近成交价与指数同步校准） */
@@ -806,7 +805,7 @@ function ledgerCalc(){
   const pnl=mv-cost,pct=cost>0?pnl/cost*100:0;
   const dayN=firstDn!==null?Math.max(1,Math.floor(Date.now()/864e5)-firstDn):0;
   const months=firstDn!==null?Math.max(1,(Date.now()/864e5-firstDn)/30.44):0;
-  /* 买入均值溢价率：成本加权（合理） */
+  /* 买入均价溢价：成本加权（合理） */
   let wPrem=0,wSum=0;
   rows.forEach(r=>{if(r.premBuy!=null){wPrem+=r.premBuy*r.cost;wSum+=r.cost}});
   const premAvg=wSum>0?wPrem/wSum:null;
@@ -816,7 +815,7 @@ function ledgerCalc(){
   const premNow=pNowWV>0?pNowW/pNowWV:(pNowN>0?pNowSum/pNowN:null);
   /* 净值折算总投入：Σ 各ETF 净值折算投入 */
   let navCost=0; etfList.forEach(e=>{navCost+=e.navCost});
-  /* 溢价造成的盈亏：逐ETF = 市值×(当前溢价−买入均值溢价)/100，再求和（不再用广发溢价套全组合） */
+  /* 溢价造成的盈亏：逐ETF = 市值×(当前溢价−买入均价溢价)/100，再求和 */
   let premPnl=null,premPnlHas=false;
   etfList.forEach(e=>{if(e.premNow!=null&&e.premBuyAvg!=null&&e.mv>0){premPnlHas=true;premPnl=(premPnl||0)+e.mv*(e.premNow-e.premBuyAvg)/100;}});
   premPnl=premPnlHas?premPnl:null;
@@ -825,10 +824,8 @@ function ledgerCalc(){
   rows.forEach(r=>{if(r.cost>0)cfs.push({t:dayNum(r.d)*864e5,a:-r.cost});});
   cfs.push({t:Date.now(),a:mv});
   const ann=(mv>0&&cfs.length>=2&&dayN>=30)?(xirr(cfs)*100):null;
-  /* 溢价率面板固定展示：广发纳指(159941)当前溢价率（静态净值口径，同花顺同口径） */
-  const gfPrem=curPrem(PREM_ETF,null,0);
   return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,navCost,
-    lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,gfPrem,
+    lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,
     /* 逐ETF汇总后的溢价率盈亏影响 */
     premPnl};
 }
@@ -855,8 +852,8 @@ function renderLedger(){
     </div>`;
   }).join(''):'';
   /* 溢价率面板 */
-  if(L.premAvg!=null||L.gfPrem!=null||L.premNow!=null){
-    const pn=L.gfPrem!=null?L.gfPrem:(L.premNow!=null?L.premNow:1.5), pb=L.premAvg!=null?L.premAvg:1.5;
+  if(L.premAvg!=null||L.premNow!=null){
+    const pn=L.premNow!=null?L.premNow:1.5, pb=L.premAvg!=null?L.premAvg:1.5;
     const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
     const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
       const w=Math.min(50,Math.abs(v)/5*50);
@@ -864,17 +861,17 @@ function renderLedger(){
       return `<div class="pmBar"><u style="${v>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`};background:${c}"></u><i></i></div>`;
     };
     $('pmBox').innerHTML=`
-      <div class="pmRow"><span class="k">买入均值溢价</span>
+      <div class="pmRow"><span class="k">买入均价溢价</span>
         <span class="v" style="color:${pcol(pb)}">${pb>=0?'+':''}${pb.toFixed(2)}%</span>${bar(pb)}
       </div>
-      <div class="pmRow"><span class="k">广发纳指溢价</span>
+      <div class="pmRow"><span class="k">组合当前溢价</span>
         <span class="v" style="color:${pcol(pn)}">${pn>=0?'+':''}${pn.toFixed(2)}%</span>${bar(pn)}
       </div>
       <div class="lgMeta" style="margin-top:2px">${
         L.premPnl!=null
           ? `溢价率影响（按各ETF当前溢价−买入均价溢价逐只汇总）：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
           : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
-      } · 广发纳指(159941) 当前溢价=现价÷最新单位净值−1（静态净值口径，与同花顺显示一致）</div>`;
+      } · 组合当前溢价=持仓各ETF按市值加权的当前溢价率（现价÷最新单位净值−1，静态净值口径，与同花顺显示一致）</div>`;
   }else{
     $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
   }
