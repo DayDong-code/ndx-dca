@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.19f">
+<meta name="x-app-ver" content="2026.09.19g">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1207,9 +1207,19 @@ function loadTencent(cb){
      中都可靠触发 onload/onerror/ontimeout 回调；并用 overrideMimeType('text/plain; charset=gbk')
      由浏览器原生解码中文，彻底绕开 TextDecoder/AbortController 兼容性坑。 */
   try{
-    const recsArr=Array.isArray(recs)?recs:[];
-    const codes=[...new Set([...['513100','513300','159941','513110'],...recsArr.map(r=>r.code)]).filter(c=>c&&symOf(c))];
-    const list=['usNDX',...codes.map(symOf)];
+    /* 极端防御：部分 iOS 环境 Array.isArray/Array.prototype.map 行为异常，
+       用最原始的 for 循环和 typeof 手工收集代码，不依赖任何数组高阶方法。 */
+    const codeSet={};
+    function addCode(c){ if(c&&typeof c==='string'&&symOf(c))codeSet[c]=1; }
+    const defaults=['513100','513300','159941','513110'];
+    for(let i=0;i<defaults.length;i++)addCode(defaults[i]);
+    if(recs&&typeof recs==='object'&&typeof recs.length==='number'){
+      for(let i=0;i<recs.length;i++){
+        const r=recs[i]; if(r&&typeof r==='object'&&r.code)addCode(r.code);
+      }
+    }
+    const codes=[]; for(const c in codeSet)codes.push(c);
+    const list=['usNDX']; for(let i=0;i<codes.length;i++)list.push(symOf(codes[i]));
     const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
     const xhr=new XMLHttpRequest();
     xhr.open('GET',src,true);
