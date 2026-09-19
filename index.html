@@ -1248,5 +1248,17 @@ window.__selfTest=function(){
           quote:{p:quote.p,timeET:quote.timeET}};
 };
 </script>
+<script>
+/* 注册 Service Worker：让添加到主屏幕的 PWA 每次都拿最新页面（无需删了重装） */
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    let reloading=false;
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(!reloading){reloading=true;location.reload();}
+    });
+  });
+}
+</script>
 </body>
 </html>
