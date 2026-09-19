@@ -46,9 +46,10 @@ header{position:sticky;top:0;z-index:50;background:#eaf3fd;border-bottom:1px sol
 @keyframes fade{from{opacity:.3;transform:translateY(5px)}}
 section{margin-top:14px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 4px 20px rgba(31,80,160,.10)}
-.card h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.card h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.card h3 .tt{white-space:nowrap;flex-shrink:0}
 .card h3 .sub{font-size:11px;color:var(--txt3);font-weight:400}
-.card h3 .right{margin-left:auto;font-size:11px;color:var(--txt2);font-weight:400}
+.card h3 .right{margin-left:auto;font-size:11px;color:var(--txt2);font-weight:400;white-space:nowrap;flex-shrink:0}
 /* ===== 底部Tab栏 ===== */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(232,242,252,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:5px 0 calc(5px + env(safe-area-inset-bottom))}
 .tabbar button{background:none;border:none;color:var(--txt3);font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 0 3px;font-family:inherit;transition:color .2s}
@@ -279,7 +280,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
     </section>
 
     <section id="secChart" class="card">
-      <h3>📈 指数走势<span class="sub">近5年真实行情</span><span class="right" id="chartRangeTxt"></span></h3>
+      <h3><span class="tt">📈 指数走势</span><span class="sub">近5年真实行情</span><span class="right" id="chartRangeTxt"></span></h3>
       <div class="tabs" id="chartTabs">
         <span data-r="1">1月</span><span data-r="3">3月</span><span data-r="6">6月</span><span class="on" data-r="12">1年</span><span data-r="36">3年</span><span data-r="60">5年</span>
       </div>
