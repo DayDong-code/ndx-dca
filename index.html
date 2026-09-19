@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20a">
+<meta name="x-app-ver" content="2026.09.20b">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -668,7 +668,7 @@ const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','513390'
 /* 买入ETF下拉：由 ETFS 动态生成，保证与行情字典一致（官方简称），改 ETFS 即同步下拉 */
 (function(){const sel=document.getElementById('fEtf');if(!sel)return;
 for(const code in ETFS){const o=document.createElement('option');o.value=code;o.textContent=code+' · '+ETFS[code];sel.appendChild(o);}
-const o=document.createElement('option');o.value='';o.textContent='其他 / 自定义';sel.appendChild(o);})();
+})();
 const PREM_ETF='159941'; /* 溢价率面板固定展示的ETF：广发纳指 */
 /* ETF 实时行情缓存：code -> {p, pc, chp, t} */
 let etfQ={};
@@ -904,7 +904,7 @@ function openModal(r){
   $('mTitle').textContent=r?'编辑买入记录':'记一笔买入';
   $('fDate').value=r?r.d:todayStr();$('fDate').max=todayStr();
   const known=r&&ETFS[r.code]?r.code:'';
-  $('fEtf').value=known||(r?'':'159941');
+  $('fEtf').value=known||'159941';
   $('fPrice').value=r?r.price:'';
   $('fShare').value=r?r.share:'';
   $('fAmt').value=r?r.amt:'';
