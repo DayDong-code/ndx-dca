@@ -2,7 +2,7 @@
  * 策略：HTML 导航请求 network-first（每次都尝试拿最新页面，部署后立即生效）；
  *       离线时回退到缓存。静态资源 cache-first。
  * 这样添加到主屏幕的 PWA 打开即最新，无需删了重装图标。 */
-const CACHE = 'ndx-dca-v1';
+const CACHE = 'ndx-dca-v2';
 const HTML = '/ndx-dca/';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
