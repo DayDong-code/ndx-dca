@@ -27,7 +27,7 @@
 html{scroll-behavior:auto}
 body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",sans-serif;font-variant-numeric:tabular-nums;padding-bottom:calc(84px + env(safe-area-inset-bottom));overflow-x:hidden}
 a{color:var(--brand);text-decoration:none}
-.wrap{max-width:520px;margin:0 auto;padding:0 14px}
+.wrap{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 6px) 14px 0}
 /* ===== 顶栏 ===== */
 header{position:sticky;top:0;z-index:50;background:#eaf3fd;border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .hd{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 10px}
@@ -40,6 +40,14 @@ header{position:sticky;top:0;z-index:50;background:#eaf3fd;border-bottom:1px sol
 .hd .refresh svg{width:13px;height:13px}
 .spin{animation:rot 1s linear infinite}
 @keyframes rot{to{transform:rotate(360deg)}}
+/* ===== 首页顶部标题（非固定，随页面滚动） ===== */
+.homeHead{display:flex;align-items:center;gap:10px;padding:12px 2px 2px}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;font-weight:800;font-size:14px;letter-spacing:.5px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(47,107,255,.35)}
+.homeTitle{font-size:19px;font-weight:800;color:var(--txt);letter-spacing:.3px}
+/* ===== 右上角圆形刷新按钮（固定浮层） ===== */
+.refreshFab{position:fixed;top:calc(env(safe-area-inset-top) + 14px);right:14px;z-index:80;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--brand);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(31,80,160,.18)}
+.refreshFab:active{opacity:.6}
+.refreshFab svg{width:19px;height:19px}
 /* ===== 页面容器 ===== */
 .page{display:none}
 .page.active{display:block;animation:fade .22s ease}
@@ -229,22 +237,17 @@ footer .src a{color:var(--txt2);margin:0 3px}
 </style>
 </head>
 <body>
-<header>
-  <div class="wrap hd">
-    <div class="logo">
-      <div class="dot">N100</div>
-      <div class="tt"><span id="hdTitle">纳指100指数定投</span><small id="hdSub">NASDAQ 100 · 实时行情</small></div>
-    </div>
-    <button class="refresh" id="btnRefresh">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" id="icoR"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
-      <span id="refreshTxt">刷新</span>
-    </button>
-  </div>
-</header>
+<button class="refreshFab" id="btnRefresh" aria-label="刷新行情">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" id="icoR"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
+</button>
 
 <div class="wrap">
   <!-- ============ Tab 1 首页 ============ -->
   <div class="page active" id="page-home">
+    <div class="homeHead">
+      <div class="avatar">Day</div>
+      <div class="homeTitle">Day的AI定投</div>
+    </div>
     <section id="secQuote" class="card">
       <div class="qname"><b style="color:var(--txt);font-size:15px" id="qName">纳斯达克100</b><span id="qCode">.NDX</span><span class="mkt open" id="mkt">交易中</span></div>
       <div class="qprice">
@@ -1220,7 +1223,7 @@ function switchTab(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.toggle('active',el.id==='page-'+p));
   document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   const[T,S]=TABS[p];
-  $('hdTitle').textContent=T;$('hdSub').textContent=S;
+  const ht=$('hdTitle');if(ht)ht.textContent=T;const hs=$('hdSub');if(hs)hs.textContent=S;
   document.title=T+' · 纳指100定投工作台';
   window.scrollTo(0,scrollMemo[p]||0);
   if(p==='home')requestAnimationFrame(drawChart);
