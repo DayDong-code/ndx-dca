@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.19b">
+<meta name="x-app-ver" content="2026.09.19c">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1179,7 +1179,7 @@ function applyEtfQ(code,f){
   const chp=+f[32];
   const nav=+f[81];  /* 单位净值：腾讯行情第81字段，已与东方财富基金净值(159941=1.4850)交叉核对一致 */
   etfQ[code]={p,pc:+f[4],o:+f[5],chp:isFinite(chp)?chp:0,
-    ch:+f[31],h:+f[33],l:+f[34],name:f[1],t:f[30],
+    ch:+f[31],h:+f[33],l:+f[34],name:ETFS[code]||f[1]||code,t:f[30],
     nav:(nav>0&&nav<p*2)?nav:0};
   return true;
 }
@@ -1208,7 +1208,11 @@ function loadTencent(cb){
     .then(r=>{ if(!r.ok)throw 0; return r.arrayBuffer(); })
     .then(buf=>{
       clearTimeout(to);
-      const text=new TextDecoder('gbk').decode(buf);
+      /* 关键修复：改用 latin1。腾讯行情是 GBK 编码，但价格/净值/时间等关键字段全是 ASCII，
+         在 latin1（逐字节映射）下数字丝毫不损；只有中文名会乱码，已由 ETFS 字典兜底。
+         老版本 iOS Safari 的 TextDecoder 不支持 'gbk' label 会抛 RangeError → 进 catch → 刷新失败，
+         换成 latin1 可彻底绕开该兼容性坑。 */
+      const text=new TextDecoder('latin1').decode(buf);
       let qok=false;
       text.split(';').forEach(line=>{
         const i=line.indexOf('=');
@@ -1226,7 +1230,7 @@ function loadTencent(cb){
       if(qok){renderQuote();renderScore();renderLedger();if(curTab==='home')drawChart();}
       cb&&cb(qok);
     })
-    .catch(()=>{clearTimeout(to);cb&&cb(false);});
+    .catch(e=>{clearTimeout(to);console.error('[loadTencent] fetch/解析失败:',e);cb&&cb(false);});
 }
 function refreshAll(manual){
   const ico=$('icoR');
