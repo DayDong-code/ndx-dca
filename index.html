@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.19c">
+<meta name="x-app-ver" content="2026.09.19d">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1203,9 +1203,10 @@ function loadTencent(cb){
   const list=['usNDX',...codes.map(symOf)];
   const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
   const ac=new AbortController();
-  const to=setTimeout(()=>ac.abort(),8000);
+  let aborted=false;
+  const to=setTimeout(()=>{aborted=true;ac.abort();},8000);
   fetch(src,{mode:'cors',cache:'no-store',signal:ac.signal})
-    .then(r=>{ if(!r.ok)throw 0; return r.arrayBuffer(); })
+    .then(r=>{ if(!r.ok)throw 'HTTP'+r.status; return r.arrayBuffer(); })
     .then(buf=>{
       clearTimeout(to);
       /* 关键修复：改用 latin1。腾讯行情是 GBK 编码，但价格/净值/时间等关键字段全是 ASCII，
@@ -1228,17 +1229,23 @@ function loadTencent(cb){
         }
       });
       if(qok){renderQuote();renderScore();renderLedger();if(curTab==='home')drawChart();}
-      cb&&cb(qok);
+      cb&&cb(qok, qok?'':(buf.byteLength?'解析无有效行情数据':'空响应'));
     })
-    .catch(e=>{clearTimeout(to);console.error('[loadTencent] fetch/解析失败:',e);cb&&cb(false);});
+    .catch(e=>{
+      clearTimeout(to);
+      const reason=aborted?'超时(8秒无响应)':(typeof e==='string'?e:'网络/CORS被拦截');
+      console.error('[loadTencent] 失败详情:',e);
+      window.__ltErr=String(e&&e.message||e);
+      cb&&cb(false,reason);
+    });
 }
 function refreshAll(manual){
   const ico=$('icoR');
   if(manual)ico.classList.add('spin');          /* 只有手动点才转圈；自动刷新静默更新，避免"一直在刷新"的观感 */
   let cleared=false;
-  const done=ok=>{
+  const done=(ok,reason)=>{
     if(cleared)return;cleared=true;             /* 幂等：无论成功/失败/超时，只停一次 */
-    if(manual){ico.classList.remove('spin');toast(ok?'行情已更新至最新':'网络刷新失败，当前显示快照数据');}
+    if(manual){ico.classList.remove('spin');toast(ok?'行情已更新至最新':'刷新失败：'+(reason||'未知原因')+'（显示快照）');}
   };
   try{loadTencent(done);}catch(e){done(false);} /* loadTencent 万一同步抛错也能收尾 */
   setTimeout(()=>done(false),9000);             /* 硬兜底：无论如何 9 秒内必停转，防 iOS 上卡死 */
