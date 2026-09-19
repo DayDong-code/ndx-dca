@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.19k">
+<meta name="x-app-ver" content="2026.09.20a">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -430,13 +430,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
     <h4><span id="mTitle">记一笔买入</span><span class="x" id="mClose">✕</span></h4>
     <div class="fTip">按同花顺「成交回报」填就行：<b>成交价、份额、金额</b>是必须的；<b>溢价率</b>记下当时的值，方便日后复盘"是不是买贵了"。</div>
     <div class="fi"><label>成交日期</label><input id="fDate" type="date"></div>
-    <div class="fi"><label>买入的ETF</label><select id="fEtf">
-      <option value="513100">513100 · 纳指ETF国泰</option>
-      <option value="513300">513300 · 纳斯达克ETF华夏</option>
-      <option value="159941">159941 · 纳指ETF广发</option>
-      <option value="513110">513110 · 纳指ETF华泰柏瑞</option>
-      <option value="">其他 / 自定义</option>
-    </select></div>
+    <div class="fi"><label>买入的ETF</label><select id="fEtf"></select></div>
     <div class="fi2">
       <div class="fi"><label>成交价（元）</label><input id="fPrice" type="number" step="0.001" placeholder="2.266"></div>
       <div class="fi"><label>买入份额（份）</label><input id="fShare" type="number" step="1" placeholder="440"></div>
@@ -670,7 +664,11 @@ function animateBars(){
    计算：成本 = amt + fee ；市值 = share × 当前价 ；盈亏 = 市值 - 成本
 ================================================================ */
 const HKEY='ndx100_ledger_v2';
-const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','159941':'纳指ETF广发','513110':'纳指ETF华泰柏瑞'};
+const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','513390':'纳指100ETF博时','513870':'纳指ETF富国','513110':'纳指ETF华泰柏瑞','159941':'纳指ETF广发','159501':'纳指ETF嘉实','159513':'纳斯达克100ETF大成','159632':'纳斯达克ETF华安','159659':'纳斯达克100ETF招商','159660':'纳指ETF汇添富','159696':'纳指ETF易方达'};
+/* 买入ETF下拉：由 ETFS 动态生成，保证与行情字典一致（官方简称），改 ETFS 即同步下拉 */
+(function(){const sel=document.getElementById('fEtf');if(!sel)return;
+for(const code in ETFS){const o=document.createElement('option');o.value=code;o.textContent=code+' · '+ETFS[code];sel.appendChild(o);}
+const o=document.createElement('option');o.value='';o.textContent='其他 / 自定义';sel.appendChild(o);})();
 const PREM_ETF='159941'; /* 溢价率面板固定展示的ETF：广发纳指 */
 /* ETF 实时行情缓存：code -> {p, pc, chp, t} */
 let etfQ={};
@@ -1213,7 +1211,7 @@ function loadTencent(cb){
        用最原始的 for 循环和 typeof 手工收集代码，不依赖任何数组高阶方法。 */
     const codeSet={};
     function addCode(c){ if(c&&typeof c==='string'&&symOf(c))codeSet[c]=1; }
-    const defaults=['513100','513300','159941','513110'];
+    const defaults=['513100','513300','513390','513870','513110','159941','159501','159513','159632','159659','159660','159696'];
     for(let i=0;i<defaults.length;i++)addCode(defaults[i]);
     if(recs&&typeof recs==='object'&&typeof recs.length==='number'){
       for(let i=0;i<recs.length;i++){
