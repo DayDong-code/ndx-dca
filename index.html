@@ -824,24 +824,28 @@ function renderLedger(){
   }).join(''):'';
   /* 溢价率面板 */
   if(L.premAvg!=null||L.gfPrem!=null||L.premNow!=null){
-    const pn=L.gfPrem!=null?L.gfPrem:(L.premNow!=null?L.premNow:1.5), pb=L.premAvg!=null?L.premAvg:1.5;
+    const pn=L.gfPrem!=null?L.gfPrem:(L.premNow!=null?L.premNow:null);
+    const pb=L.premAvg!=null?L.premAvg:null;
     const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
-    const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
+    const bar=v=>{ /* 溢价率条：0~5%，中点2.5%；无值时显示空 */
+      if(v==null)return '';
       const w=Math.min(50,Math.abs(v)/5*50);
       const c=v>=0?pcol(v):'#22c55e';
       return `<div class="pmBar"><u style="${v>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`};background:${c}"></u><i></i></div>`;
     };
+    const fmtP=v=> v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%';
     $('pmBox').innerHTML=`
       <div class="pmRow"><span class="k">买入均值溢价</span>
-        <span class="v" style="color:${pcol(pb)}">${pb>=0?'+':''}${pb.toFixed(2)}%</span>${bar(pb)}
+        <span class="v" style="color:${pb==null?'#94a3b8':pcol(pb)}">${fmtP(pb)}</span>${bar(pb)}
       </div>
       <div class="pmRow"><span class="k">广发纳指溢价</span>
-        <span class="v" style="color:${pcol(pn)}">${pn>=0?'+':''}${pn.toFixed(2)}%</span>${bar(pn)}
+        <span class="v" style="color:${pn==null?'#94a3b8':pcol(pn)}">${fmtP(pn)}</span>${bar(pn)}
       </div>
       <div class="lgMeta" style="margin-top:2px">${
-        L.premPnl!=null
+        pn==null?'<b style="color:#ef4444">行情未刷新，点右上角圆形按钮刷新</b> · ':
+        (L.premPnl!=null
           ? `溢价率影响：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
-          : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
+          : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响')
       } · 广发纳指(159941) 当前溢价=现价÷最新单位净值−1（静态净值口径，与同花顺显示一致）</div>`;
   }else{
     $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
@@ -1205,23 +1209,35 @@ function loadTencent(cb){
   const list=['usNDX',...codes.map(symOf)];
   const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
   const s=document.createElement('script');
-  s.charset='gbk';
-  s.src=src;
-  s.onload=()=>{let ok=false;
+  s.charset='gbk';s.src=src;
+  let done=false,timer=null,poll=null;
+  const finish=ok=>{
+    if(done)return;done=true;
+    if(timer)clearTimeout(timer);if(poll)clearInterval(poll);
     try{
       const raw=window.v_usNDX||'';const f=raw.split('~');
-      ok=applyQuote(f);
+      const qok=applyQuote(f);
       codes.forEach(c=>{
-        const k='v_'+symOf(c);
-        const rv=window[k];
+        const rv=window['v_'+symOf(c)];
         if(rv){try{applyEtfQ(c,rv.split('~'))}catch(e){}}
       });
-    }catch(e){}
-    if(ok){renderQuote();renderScore();renderLedger();if(curTab==='home')drawChart()}
-    cb&&cb(ok);
+      if(qok){renderQuote();renderScore();renderLedger();if(curTab==='home')drawChart();}
+      cb&&cb(qok);
+    }catch(e){cb&&cb(false);}
   };
-  s.onerror=()=>cb&&cb(false);
-  document.head.appendChild(s);setTimeout(()=>s.remove(),8e3);
+  s.onload=()=>finish(true);
+  s.onerror=()=>finish(false);
+  document.head.appendChild(s);
+  /* iOS PWA(WKWebView) 对 text/plain 的跨域 script 往往不触发 onload/onerror，
+     改为轮询 window 全局变量：数据一旦写入即成功；超时兜底失败，避免刷新钮一直转圈 */
+  const t0=Date.now();
+  poll=setInterval(()=>{
+    if(done)return;
+    if(window.v_usNDX)return finish(true);
+    if(Date.now()-t0>8000)finish(false);
+  },200);
+  timer=setTimeout(()=>{if(!done)finish(false);},8200);
+  setTimeout(()=>s.remove(),9000);
 }
 function refreshAll(manual){
   const ico=$('icoR');ico.classList.add('spin');
