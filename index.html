@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.19i">
+<meta name="x-app-ver" content="2026.09.19j">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -437,7 +437,6 @@ footer .src a{color:var(--txt2);margin:0 3px}
       <option value="513110">513110 · 纳指ETF华泰柏瑞</option>
       <option value="">其他 / 自定义</option>
     </select></div>
-    <div class="fi" id="fCustom" style="display:none"><label>ETF名称（可含代码）</label><input id="fName" placeholder="如：纳指100联接E 016055" maxlength="24"></div>
     <div class="fi2">
       <div class="fi"><label>成交价（元）</label><input id="fPrice" type="number" step="0.001" placeholder="2.266"></div>
       <div class="fi"><label>买入份额（份）</label><input id="fShare" type="number" step="1" placeholder="440"></div>
@@ -908,8 +907,6 @@ function openModal(r){
   $('fDate').value=r?r.d:todayStr();$('fDate').max=todayStr();
   const known=r&&ETFS[r.code]?r.code:'';
   $('fEtf').value=known||(r?'':'159941');
-  $('fCustom').style.display=known?'none':'';
-  $('fName').value=r&&!known?r.name:'';
   $('fPrice').value=r?r.price:'';
   $('fShare').value=r?r.share:'';
   $('fAmt').value=r?r.amt:'';
@@ -931,7 +928,6 @@ function openModal(r){
 }
 $('fEtf').addEventListener('change',()=>{
   const code=$('fEtf').value;
-  $('fCustom').style.display=code?'none':'';
   if(code&&etfQ[code]&&etfQ[code].p>0){
     $('fPrice').value=etfQ[code].p;
     const cp=curPrem(code,null,0);
@@ -994,7 +990,7 @@ function saveModal(){
   }
   if(prem!==null&&!isFinite(prem)){toast('溢价率格式有误');return}
   const code=$('fEtf').value;
-  const name=code?ETFS[code]:($('fName').value.trim()||'自定义ETF');
+  const name=code?ETFS[code]:'自定义ETF';
   const r={d,code,name,price:+px.toFixed(3),share:Math.round(sh),amt:+amt.toFixed(2),fee:+fee.toFixed(2),
     prem:prem===null?null:+prem.toFixed(2),note};
   if(editIdx>=0)recs[editIdx]=r;else recs.push(r);
