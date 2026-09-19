@@ -730,17 +730,15 @@ function etfCur(code,fallbackPrice,dn){
   }
   return{p:0,live:false,chp:0};
 }
-/* 当前溢价率（同花顺口径）：现价 ÷ 实时估值净值 − 1
-   实时估值净值 = 最新单位净值 × (1 + 纳指100当日涨跌幅%)
-   QDII 跨境 ETF 无盘中官方 IOPV，溢价率按 T-1 单位净值叠加当日标的涨跌估算，
-   与同花顺/雪球/集思录显示一致。无净值时回退「ETF涨跌 − 指数涨跌 + 基准」推算 */
+/* 当前溢价率（静态净值口径）：现价 ÷ 单位净值 − 1
+   采用 T-1 最新单位净值作分母，与同花顺「静态净值」口径一致（更接近你看到的值）。
+   QDII 跨境 ETF 无盘中官方 IOPV，单位净值来自腾讯行情第81字段，已与东财基金净值交叉核对。
+   无净值时回退「ETF涨跌 − 指数涨跌 + 基准」推算 */
 function curPrem(code,basePrem,dn){
   const q=etfQ[code];
   if(!q||!(q.p>0))return null;
   if(q.nav>0){
-    const idxChp=isFinite(+quote.chp)?+quote.chp:0;   /* 纳指100今日涨跌幅% */
-    const estNav=q.nav*(1+idxChp/100);                 /* 实时估值净值（同花顺 IOPV 口径） */
-    if(estNav>0)return q.p/estNav*100-100;
+    return q.p/q.nav*100-100;                 /* 静态净值口径：现价÷单位净值−1 */
   }
   const chpIdx=+quote.chp||0;               /* 指数今日涨跌幅% */
   const diff=q.chp-chpIdx;                   /* ETF超额涨跌 = 溢价率变化 */
@@ -788,7 +786,7 @@ function ledgerCalc(){
   rows.forEach(r=>{if(r.premBuy!=null){wPrem+=r.premBuy*r.cost;wSum+=r.cost}if(r.premNow!=null){pNowSum+=r.premNow;pNowN++}});
   const premAvg=wSum>0?wPrem/wSum:null;
   const premNow=pNowN>0?pNowSum/pNowN:null;
-  /* 溢价率面板固定展示：广发纳指(159941)实时溢价率 = 现价÷实时估值净值−1（同花顺 QDII 口径） */
+  /* 溢价率面板固定展示：广发纳指(159941)当前溢价率 = 现价÷单位净值−1（静态净值口径，同花顺同口径） */
   const gfPrem=curPrem(PREM_ETF,null,0);
   return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,
     lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,gfPrem,
@@ -836,7 +834,7 @@ function renderLedger(){
         L.premPnl!=null
           ? `溢价率影响：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
           : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
-      } · 广发纳指(159941) 当前溢价=现价÷实时估值净值−1（实时估值净值=单位净值×(1+纳指100当日涨跌)，同花顺/集思录同口径）</div>`;
+      } · 广发纳指(159941) 当前溢价=现价÷最新单位净值−1（静态净值口径，与同花顺显示一致）</div>`;
   }else{
     $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
   }
@@ -1187,7 +1185,7 @@ function applyEtfQ(code,f){
 /* 溢价率净值来源说明（已修正）：
    旧版误用东方财富 f168（实际是换手率，159941 返回 2.94）当净值，导致溢价率算成"现价÷换手率"的垃圾值。
    现改用腾讯行情第81字段 = 单位净值（159941=1.4850，已与东方财富基金净值接口交叉核对一致），
-   按同花顺 QDII 口径算「实时估值净值 = 单位净值×(1+纳指100当日涨跌)」，溢价率=现价÷实时估值净值−1。
+   采用静态净值口径：溢价率 = 现价 ÷ 单位净值 − 1（与同花顺「静态净值」口径一致，更接近你看到的值）。
    无需再直连东方财富，纯客户端腾讯行情即可，无 CORS 问题。 */
 /* 计算"场内代码 → 腾讯行情符号"：51xxxx 沪市，15xxxx 深市 */
 function symOf(code){
