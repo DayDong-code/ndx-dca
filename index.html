@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
+<meta name="x-app-ver" content="2026.09.19b">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1228,15 +1229,16 @@ function loadTencent(cb){
     .catch(()=>{clearTimeout(to);cb&&cb(false);});
 }
 function refreshAll(manual){
-  const ico=$('icoR');ico.classList.add('spin');
+  const ico=$('icoR');
+  if(manual)ico.classList.add('spin');          /* 只有手动点才转圈；自动刷新静默更新，避免"一直在刷新"的观感 */
   let cleared=false;
   const done=ok=>{
-    if(cleared)return;cleared=true;
-    ico.classList.remove('spin');
-    if(manual)toast(ok?'行情已更新至最新':'网络刷新失败，当前显示快照数据');
+    if(cleared)return;cleared=true;             /* 幂等：无论成功/失败/超时，只停一次 */
+    if(manual){ico.classList.remove('spin');toast(ok?'行情已更新至最新':'网络刷新失败，当前显示快照数据');}
   };
-  loadTencent(done);
-  setTimeout(()=>done(false),9000); /* 硬兜底：无论如何 9 秒内必停转，防 iOS 上卡死 */
+  try{loadTencent(done);}catch(e){done(false);} /* loadTencent 万一同步抛错也能收尾 */
+  setTimeout(()=>done(false),9000);             /* 硬兜底：无论如何 9 秒内必停转，防 iOS 上卡死 */
+  setTimeout(()=>{if(manual)ico.classList.remove('spin');},9500); /* 双保险：即使 done 漏调用，9.5s 也强制停转 */
   loadJin10();loadSina();
 }
 /* ================= Tab 切换 ================= */
