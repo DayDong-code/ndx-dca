@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20k">
+<meta name="x-app-ver" content="2026.09.20l">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -173,6 +173,7 @@ section{margin-top:14px}
 .lgrid div{background:rgba(40,90,160,.08);border-radius:7px;padding:5px 6px;text-align:center}
 .lgrid span{display:block;font-size:9.5px;color:var(--txt3);margin-bottom:2px}
 .lgrid b{font-size:11.5px;font-weight:700}
+.lgrid b .est{font-style:normal;font-size:9.5px;color:var(--txt3);font-weight:600;margin-left:2px}
 .lgrid b.pmUp{color:#f59e0b}.lgrid b.pmDn{color:#22c55e}
 /* 弹层字段成对 */
 .fi2{display:flex;gap:9px}
@@ -905,14 +906,14 @@ function renderLedger(){
     <div class="lhd">
       <div class="ltd"><b>${r.d.slice(5)}</b><span>${r.d.slice(0,4)}</span></div>
       <div class="mid"><div class="n">${r.name}${r.note?` <em style="font-style:normal;font-size:10px;color:var(--txt3)">· ${r.note}</em>`:''}</div>
-        <div class="c">${r.code||'自定义'} · 成交价 ${fmt(r.price,3)}${r.live?'':' (估)'}</div></div>
+        <div class="c">${r.code||'自定义'} · 成交价 ${fmt(r.price,3)}</div></div>
       <div class="amt"><b class="${ru?'up':'dn'}">¥${fmt0(r.mv)}</b>
         <span class="${ru?'up':'dn'}">${ru?'+':''}${fmt0(r.pnl)}元 · 本 ¥${fmt0(r.cost)}</span></div>
       <div class="del" data-i="${r.ri}">✕</div>
     </div>
     <div class="lgrid">
       <div><span>份额</span><b>${fmt0(r.share)}</b></div>
-      <div><span>现价</span><b>${fmt(r.curP,3)}</b></div>
+      <div><span>现价</span><b>${fmt(r.curP,3)}${r.live?'':'<i class="est">(估)</i>'}</b></div>
       <div><span>买入溢价</span><b class="${pc2}">${r.premBuy!=null?`${r.premBuy>=0?'+':''}${r.premBuy.toFixed(2)}%`:'--'}</b></div>
       <div><span>盈亏率</span><b class="${ru?'up':'dn'}">${ru?'+':''}${(r.pnl/r.cost*100).toFixed(1)}%</b></div>
     </div></div>`;
