@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20b">
+<meta name="x-app-ver" content="2026.09.20c">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -388,7 +388,9 @@ footer .src a{color:var(--txt2);margin:0 3px}
       <div class="cnote" style="margin-top:12px"><b>指标说明</b><br>
       · <b>溢价率</b>：场内价相对基金净值的贵贱。正=溢价（买贵了），负=折价（买便宜了）。场内纳指ETF常有 1%~3% 溢价，溢价高时买入相当于多付钱。<br>
       · <b>成本价</b>：实际成交价，市值 = 份额 × 当前价，不靠指数估算。<br>
-      · <b>含佣金成本</b>：部分券商场内ETF免佣，按你实际填写计算。</div>
+      · <b>含佣金成本</b>：部分券商场内ETF免佣，按你实际填写计算。<br>
+      · <b>净值折算投入</b>：把买入时的溢价从成交金额里剥掉，只看实际买到的基金净值价值（+佣金），用来单独评估"定投纪律成本"。<br>
+      · <b>年化(XIRR)</b>：资金加权收益率，按每笔买入的真实日期现金流计算，比把定投当首日一次性投入的简单年化更准。</div>
     </section>
 
     <section id="secCalc" class="card">
@@ -754,6 +756,18 @@ function curPrem(code,basePrem,dn){
   const base=(basePrem!=null&&isFinite(basePrem))?basePrem:1.5; /* 无基准用常见值 */
   return base+diff;
 }
+/* 资金加权年化收益率 XIRR：每笔买入为负现金流、当前市值为正现金流，二分法解出年化。
+   比 (市值/投入)^(365/天数) 更准确——后者把定投当成首日一次性投入，会高估年化。 */
+function xirr(cfs){
+  if(cfs.length<2)return null;
+  const t0=cfs[0].t;
+  const npv=rate=>{let s=0;for(let i=0;i<cfs.length;i++)s+=cfs[i].a/Math.pow(1+rate,(cfs[i].t-t0)/365);return s;};
+  let lo=-0.9999,hi=10,flo=npv(lo),fhi=npv(hi);
+  if(flo===0)return lo; if(fhi===0)return hi;
+  if(flo*fhi>0)return null;                       /* 区间内无根 */
+  for(let i=0;i<200;i++){const mid=(lo+hi)/2,fm=npv(mid);if(Math.abs(fm)<1e-9)return mid;if(flo*fm<0){hi=mid;}else{lo=mid;flo=fm;}}
+  return (lo+hi)/2;
+}
 function ledgerCalc(){
   let cost=0,mv=0,fee=0,firstDn=null;
   const rows=recs.map((r,ri)=>{
@@ -774,33 +788,49 @@ function ledgerCalc(){
   const byE={};
   rows.forEach(r=>{
     const k=r.code||r.name;
-    if(!byE[k])byE[k]={code:r.code,name:r.name,share:0,cost:0,mv:0,pnl:0,live:!!r.live,curP:0,prems:[]};
+    if(!byE[k])byE[k]={code:r.code,name:r.name,share:0,cost:0,mv:0,pnl:0,live:!!r.live,curP:0,prems:[],navCost:0};
     const e=byE[k];
     e.share+=r.share;e.cost+=r.cost;e.mv+=r.mv;e.pnl+=r.mv-r.cost;
     e.curP=r.curP;e.live=r.live;
     if(r.premBuy!=null)e.prems.push(r.premBuy);
+    /* 净值折算投入：把买入溢价从成交金额里剥掉，看实际买到的基金净值价值（佣金照实计入） */
+    e.navCost+=(r.premBuy!=null&&isFinite(r.premBuy))?r.amt/(1+r.premBuy/100)+r.fee:r.amt+r.fee;
   });
   const etfList=Object.values(byE).map(e=>({...e,
     avgCost:e.share>0?e.cost/e.share:0,
     curP:e.curP||0,
     pct:e.cost>0?e.pnl/e.cost*100:0,
-    premAvg:e.prems.length?e.prems.reduce((a,b)=>a+b,0)/e.prems.length:null,
+    premBuyAvg:e.prems.length?e.prems.reduce((a,b)=>a+b,0)/e.prems.length:null,
+    premNow:curPrem(e.code,null,0),   /* 该ETF当前溢价（静态净值口径），用于逐ETF溢价盈亏 */
   })).sort((a,b)=>b.mv-a.mv);
   const pnl=mv-cost,pct=cost>0?pnl/cost*100:0;
   const dayN=firstDn!==null?Math.max(1,Math.floor(Date.now()/864e5)-firstDn):0;
-  const ann=(cost>0&&dayN>=30)?(Math.pow(mv/cost,365/dayN)-1)*100:null;
   const months=firstDn!==null?Math.max(1,(Date.now()/864e5-firstDn)/30.44):0;
-  /* 持仓加权平均买入溢价率 vs 当前溢价率 */
-  let wPrem=0,wSum=0,pNowSum=0,pNowN=0;
-  rows.forEach(r=>{if(r.premBuy!=null){wPrem+=r.premBuy*r.cost;wSum+=r.cost}if(r.premNow!=null){pNowSum+=r.premNow;pNowN++}});
+  /* 买入均值溢价率：成本加权（合理） */
+  let wPrem=0,wSum=0;
+  rows.forEach(r=>{if(r.premBuy!=null){wPrem+=r.premBuy*r.cost;wSum+=r.cost}});
   const premAvg=wSum>0?wPrem/wSum:null;
-  const premNow=pNowN>0?pNowSum/pNowN:null;
-  /* 溢价率面板固定展示：广发纳指(159941)当前溢价率 = 现价÷单位净值−1（静态净值口径，同花顺同口径） */
+  /* 组合当前溢价率：市值加权（与买入的成本加权口径对称，避免等权失真） */
+  let pNowW=0,pNowWV=0,pNowSum=0,pNowN=0;
+  rows.forEach(r=>{if(r.premNow!=null){pNowW+=r.premNow*r.mv;pNowWV+=r.mv;pNowSum+=r.premNow;pNowN++}});
+  const premNow=pNowWV>0?pNowW/pNowWV:(pNowN>0?pNowSum/pNowN:null);
+  /* 净值折算总投入：Σ 各ETF 净值折算投入 */
+  let navCost=0; etfList.forEach(e=>{navCost+=e.navCost});
+  /* 溢价造成的盈亏：逐ETF = 市值×(当前溢价−买入均值溢价)/100，再求和（不再用广发溢价套全组合） */
+  let premPnl=null,premPnlHas=false;
+  etfList.forEach(e=>{if(e.premNow!=null&&e.premBuyAvg!=null&&e.mv>0){premPnlHas=true;premPnl=(premPnl||0)+e.mv*(e.premNow-e.premBuyAvg)/100;}});
+  premPnl=premPnlHas?premPnl:null;
+  /* 年化收益率：XIRR 资金加权，准确反映定投分散现金流；不足30天不显示 */
+  const cfs=[];
+  rows.forEach(r=>{if(r.cost>0)cfs.push({t:dayNum(r.d)*864e5,a:-r.cost});});
+  cfs.push({t:Date.now(),a:mv});
+  const ann=(mv>0&&cfs.length>=2&&dayN>=30)?(xirr(cfs)*100):null;
+  /* 溢价率面板固定展示：广发纳指(159941)当前溢价率（静态净值口径，同花顺同口径） */
   const gfPrem=curPrem(PREM_ETF,null,0);
-  return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,
+  return{rows,etfList,cost,mv,pnl,pct,dayN,ann,avgM:cost/months,n:recs.length,navCost,
     lastD:rows.length?rows[0].d:'',fee,premAvg,premNow,gfPrem,
-    /* 溢价率造成的盈亏：市值 × (广发纳指当前溢价-买入均值溢价)/100 */
-    premPnl:(premAvg!=null&&gfPrem!=null)?mv*(gfPrem-premAvg)/100:null};
+    /* 逐ETF汇总后的溢价率盈亏影响 */
+    premPnl};
 }
 function renderLedger(){
   const L=ledgerCalc(),up=L.pnl>=0,col=up?'var(--up)':'var(--down)';
@@ -808,9 +838,10 @@ function renderLedger(){
   $('lgMv').textContent='¥'+fmt0(L.mv);
   const pe=$('lgPnl');pe.textContent=(up?'+':'-')+'¥'+fmt0(Math.abs(L.pnl));pe.style.color=col;
   const pc=$('lgPct');pc.textContent=(up?'+':'')+L.pct.toFixed(1)+'%';pc.style.color=col;
-  $('lgAnn').textContent=L.ann!=null?`年化约 ${(up?'+':'')+L.ann.toFixed(1)}%`:'满30天显示年化';
+  const au=L.ann>=0;
+  $('lgAnn').textContent=L.ann!=null?`年化(XIRR) ${(au?'+':'')+L.ann.toFixed(1)}%`:'满30天显示年化';
   $('lgMeta').textContent=L.n
-    ?`共 ${L.n} 笔 · ${L.etfList.length} 只ETF · 首笔至今 ${L.dayN} 天 · 月均约 ¥${fmt0(L.avgM)}${L.fee>0?` · 佣金累计 ¥${fmt(L.fee)}`:''}`
+    ?`共 ${L.n} 笔 · ${L.etfList.length} 只ETF · 首笔至今 ${L.dayN} 天 · 月均约 ¥${fmt0(L.avgM)} · 净值折算投入 ¥${fmt0(L.navCost)}${L.fee>0?` · 佣金累计 ¥${fmt(L.fee)}`:''}`
     :'还没有买入记录';
   $('holdCount').textContent=L.n?L.n+'笔':'';
   /* 分ETF汇总 */
@@ -841,7 +872,7 @@ function renderLedger(){
       </div>
       <div class="lgMeta" style="margin-top:2px">${
         L.premPnl!=null
-          ? `溢价率影响：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
+          ? `溢价率影响（按各ETF当前溢价−买入均价溢价逐只汇总）：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':'-'}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
           : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
       } · 广发纳指(159941) 当前溢价=现价÷最新单位净值−1（静态净值口径，与同花顺显示一致）</div>`;
   }else{
