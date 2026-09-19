@@ -1285,9 +1285,9 @@ if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
     let reloading=false;
-    navigator.serviceWorker.addEventListener('controllerchange',()=>{
-      if(!reloading){reloading=true;location.reload();}
-    });
+    const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
+    navigator.serviceWorker.addEventListener('controllerchange',doReload);
+    navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.type==='RELOAD')doReload(); });
   });
 }
 </script>
