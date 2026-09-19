@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20g">
+<meta name="x-app-ver" content="2026.09.20h">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -849,12 +849,12 @@ function renderLedger(){
   $('holdCount').textContent=L.n?L.n+'笔':'';
   /* 分ETF汇总 */
   $('lgEtfs').innerHTML=L.etfList.length?(
-    `<div class="lgEh"><span class="nm">ETF</span><span class="sh" title="持仓份额 × 当前单价">份额×现价</span><span class="pp" title="该ETF累计持有收益率 = (市值−总投入)/总投入，含佣金、未年化">收益率</span><span class="pa" title="该ETF持有收益金额 = 市值 − 总投入，含佣金">收益金额</span><span class="vv" title="当前市值 = 份额 × 当前价">市值</span></div>`+
+    `<div class="lgEh"><span class="nm">ETF</span><span class="sh" title="持仓份额">份额</span><span class="pp" title="该ETF累计持有收益率 = (市值−总投入)/总投入，含佣金、未年化">收益率</span><span class="pa" title="该ETF持有收益金额 = 市值 − 总投入，含佣金">收益金额</span><span class="vv" title="当前市值 = 份额 × 当前价">市值</span></div>`+
     L.etfList.map(e=>{
       const u=e.pnl>=0;
       return `<div class="lgE">
         <span class="nm" title="${e.name} ${e.code}">${e.name.replace(/.*ETF/,'')}</span>
-        <span class="sh">${fmt0(e.share)}份 × ${fmt(e.curP,3)}</span>
+        <span class="sh">${fmt0(e.share)}份</span>
         <span class="pp ${u?'up':'dn'}">${u?'+':''}${e.pct.toFixed(1)}%</span>
         <span class="pa ${u?'up':'dn'}">${u?'+':'-'}¥${fmt0(Math.abs(e.pnl))}</span>
         <span class="vv ${u?'up':'dn'}">¥${fmt0(e.mv)}</span>
