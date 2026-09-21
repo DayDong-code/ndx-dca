@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20r">
+<meta name="x-app-ver" content="2026.09.20s">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -448,7 +448,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
     <div class="fi"><label>买入的ETF</label><select id="fEtf"></select></div>
     <div class="fi2">
       <div class="fi"><label>成交价（元）</label><input id="fPrice" type="number" step="0.001" placeholder="2.266"></div>
-      <div class="fi"><label>买入份额（份）</label><input id="fShare" type="number" step="1" placeholder="440"></div>
+      <div class="fi"><label>买入份额（份）</label><input id="fShare" type="number" step="1" placeholder="500"></div>
     </div>
     <div class="fi2">
       <div class="fi"><label>成交金额（元）</label><input id="fAmt" type="number" step="0.01" placeholder="1000"></div>
@@ -973,12 +973,11 @@ function openModal(r){
   $('fFee').value=r?(r.fee||0):5;
   $('fPrem').value=(r&&r.prem!=null)?r.prem:'';
   $('fNote').value=r?(r.note||''):'';
-  /* 新建时若该ETF有实时价，自动填当前价 + 估算份额（溢价率不预填，留空由用户手填） */
+  /* 新建时若该ETF有实时价，自动填成交价（份额、溢价率均不预填，留空由用户手填） */
   if(!r){
     const code=$('fEtf').value;
     if(code&&etfQ[code]&&etfQ[code].p>0){
       $('fPrice').value=etfQ[code].p;
-      $('fShare').value=floorLot(1000/etfQ[code].p)||100;
     }
   }
   updFCalc();
