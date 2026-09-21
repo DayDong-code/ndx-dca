@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20q">
+<meta name="x-app-ver" content="2026.09.20r">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -973,13 +973,11 @@ function openModal(r){
   $('fFee').value=r?(r.fee||0):5;
   $('fPrem').value=(r&&r.prem!=null)?r.prem:'';
   $('fNote').value=r?(r.note||''):'';
-  /* 新建时若该ETF有实时价，自动填当前价 + 当前溢价率 */
+  /* 新建时若该ETF有实时价，自动填当前价 + 估算份额（溢价率不预填，留空由用户手填） */
   if(!r){
     const code=$('fEtf').value;
     if(code&&etfQ[code]&&etfQ[code].p>0){
       $('fPrice').value=etfQ[code].p;
-      const cp=curPrem(code,null,0);
-      if(cp!=null)$('fPrem').value=cp.toFixed(2);
       $('fShare').value=floorLot(1000/etfQ[code].p)||100;
     }
   }
@@ -990,8 +988,6 @@ $('fEtf').addEventListener('change',()=>{
   const code=$('fEtf').value;
   if(code&&etfQ[code]&&etfQ[code].p>0){
     $('fPrice').value=etfQ[code].p;
-    const cp=curPrem(code,null,0);
-    if(cp!=null&&!$('fPrem').value)$('fPrem').value=cp.toFixed(2);
   }
   updFCalc();
 });
