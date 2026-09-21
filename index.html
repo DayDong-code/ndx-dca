@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20l">
+<meta name="x-app-ver" content="2026.09.20m">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -230,6 +230,10 @@ canvas{width:100%;display:block;border-radius:10px}
 .cvbar{display:flex;height:7px;border-radius:4px;overflow:hidden;margin-top:9px;background:rgba(40,90,160,.10)}
 .cvbar i{height:100%}
 .cnote{font-size:11px;color:var(--txt3);line-height:1.6;margin-top:10px}
+.ciJudge{display:flex;align-items:center;gap:8px;margin:10px 0 2px}
+.ciJudge .btnSm{flex:0 0 auto;width:auto;padding:7px 12px}
+.ciJudge .btnSm.on{border-color:rgba(34,197,94,.5);color:#16a34a;background:rgba(34,197,94,.08)}
+.ciJudge .jhint{font-size:10.5px;color:var(--txt3)}
 /* ===== 弹层 ===== */
 .mask{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99;display:none;align-items:flex-end;justify-content:center}
 .mask.show{display:flex}
@@ -372,6 +376,17 @@ footer .src a{color:var(--txt2);margin:0 3px}
       </div>
       <div class="cnote" style="margin-top:12px">历史数据来自纳斯达克官方日线收盘价（2021年9月至今），评分每天随行情自动更新。分位、回撤等指标用于衡量"当前价格在历史上的相对贵贱"，不预测未来走势。</div>
     </section>
+    <section id="secCalc" class="card">
+      <h3>🧮 复利计算器<span class="sub">年化按研判建议</span></h3>
+      <div class="ci">
+        <div class="f"><label>每月定投</label><input type="number" id="cAmt" value="1000" min="0" step="100"><span class="u">元</span></div>
+        <div class="f"><label>初始本金</label><input type="number" id="cInit" value="0" min="0" step="1000"><span class="u">元</span></div>
+        <div class="f"><label>年化收益</label><input type="range" id="cRate" min="0" max="25" step="0.5" value="12"><span class="rateVal" id="cRateTxt">12%</span></div>
+      </div>
+      <div class="ciJudge"><button id="cUseJudge" class="btnSm">📊 按研判建议年化</button><span id="cJudgeHint" class="jhint"></span></div>
+      <div class="cvGrid" id="cvGrid"></div>
+      <div class="cnote" id="cNote"></div>
+    </section>
   </div>
 
   <!-- ============ Tab 4 成长计划 ============ -->
@@ -403,16 +418,6 @@ footer .src a{color:var(--txt2);margin:0 3px}
       · <b>年化(XIRR)</b>：资金加权收益率，按每笔买入的真实日期现金流计算，比把定投当首日一次性投入的简单年化更准。</div>
     </section>
 
-    <section id="secCalc" class="card">
-      <h3>🧮 复利计算器<span class="sub">定投10/15/20年</span></h3>
-      <div class="ci">
-        <div class="f"><label>每月定投</label><input type="number" id="cAmt" value="1000" min="0" step="100"><span class="u">元</span></div>
-        <div class="f"><label>初始本金</label><input type="number" id="cInit" value="0" min="0" step="1000"><span class="u">元</span></div>
-        <div class="f"><label>年化收益</label><input type="range" id="cRate" min="0" max="25" step="0.5" value="12"><span class="rateVal" id="cRateTxt">12%</span></div>
-      </div>
-      <div class="cvGrid" id="cvGrid"></div>
-      <div class="cnote" id="cNote"></div>
-    </section>
   </div>
 </div>
 
@@ -660,6 +665,14 @@ function renderScore(){
   $('stAnn').textContent=ann.toFixed(1)+'%';
   $('stDd').textContent='-'+Math.abs(r.dd*100).toFixed(1)+'%';
   $('statRange').textContent=`${d0.getUTCFullYear()}/${d0.getUTCMonth()+1} 至今`;
+  /* —— 联动复利计算器：把研判结论映射成建议年化（均值回归：便宜→更高预期，贵→更低预期） —— */
+  const ann5=(Math.pow(SNAP.closes[SNAP.closes.length-1]/SNAP.closes[0],1/5)-1)*100;
+  const SPREAD=7;
+  let adv=ann5+(0.5-r.pct)*2*SPREAD;
+  adv=Math.max(6,Math.min(25,Math.round(adv*2)/2));
+  JUDGE.total=Math.round(r.total);JUDGE.pct=r.pct;JUDGE.ann5=ann5;JUDGE.adv=adv;
+  const jh=$('cJudgeHint');if(jh)jh.textContent=`建议 ${adv.toFixed(1)}% · 评分${Math.round(r.total)} · 5年分位${Math.round(r.pct*100)}%`;
+  if(!userTouchedRate)applyJudgeToCalc();
 }
 function animateBars(){
   document.querySelectorAll('#jRows .bar i').forEach(el=>{
@@ -1191,6 +1204,14 @@ function loadSina(){
   document.head.appendChild(s);setTimeout(()=>s.remove(),8e3);
 }
 /* ================= 复利计算器 ================= */
+let userTouchedRate=false;                 /* 用户拖过滑块后为 true，研判不再自动覆盖 */
+const JUDGE={total:0,pct:0,ann5:0,adv:0}; /* 价值研判结论（供计算器联动） */
+function applyJudgeToCalc(){               /* 把研判建议年化套进滑块并刷新 */
+  if(!(JUDGE.adv>0))return;
+  const c=$('cRate');c.value=JUDGE.adv;$('cRateTxt').textContent=JUDGE.adv+'%';
+  renderCalc();
+  const b=$('cUseJudge');if(b){b.textContent='📊 已用研判建议';b.classList.add('on');}
+}
 function fv(P0,A,r,t){
   const i=r/100/12,n=12*t;
   const gP=P0*Math.pow(1+i,n);
@@ -1209,10 +1230,13 @@ function renderCalc(){
       <div class="sub"><i>本金 <b style="color:var(--txt2)">¥${fmt0(cost)}</b></i><i>收益 <b>¥${fmt0(profit)}</b></i>${mult?`<i>本金翻 <b>${mult.toFixed(1)}</b> 倍</i>`:''}</div>
       <div class="cvbar"><i style="width:${pc}%;background:rgba(79,124,255,.65)"></i><i style="width:${100-pc}%;background:linear-gradient(90deg,#22c55e,#84cc16)"></i></div>
     </div>`}).join('');
-  $('cNote').innerHTML=`每月投 <b>¥${fmt0(A)}</b>${P0?`、已有本金 ¥${fmt0(P0)}`:''}，按年化 <b>${r}%</b> 复利滚动：10年约 <b>¥${fmt0(fv(P0,A,r,10))}</b>，15年约 <b>¥${fmt0(fv(P0,A,r,15))}</b>，20年约 <b>¥${fmt0(fv(P0,A,r,20))}</b>。本金是蓝色的部分，绿色是复利帮你赚的。<span class="dot5"></span>纳指100过去5年实际年化约 <b>${((Math.pow(SNAP.closes[SNAP.closes.length-1]/SNAP.closes[0],1/5)-1)*100).toFixed(1)}%</b>，但未来未必，收益率越高波动越大，谨慎乐观。`;
+  const ann5real=((Math.pow(SNAP.closes[SNAP.closes.length-1]/SNAP.closes[0],1/5)-1)*100).toFixed(1);
+  const judgeLine=JUDGE.adv>0?`当前按研判建议年化 <b>${JUDGE.adv.toFixed(1)}%</b>（评分${JUDGE.total} · 5年分位${Math.round(JUDGE.pct*100)}%）计算，可拖动上/下调。`:'';
+  $('cNote').innerHTML=`每月投 <b>¥${fmt0(A)}</b>${P0?`、已有本金 ¥${fmt0(P0)}`:''}，按年化 <b>${r}%</b> 复利滚动：10年约 <b>¥${fmt0(fv(P0,A,r,10))}</b>，15年约 <b>¥${fmt0(fv(P0,A,r,15))}</b>，20年约 <b>¥${fmt0(fv(P0,A,r,20))}</b>。本金是蓝色的部分，绿色是复利帮你赚的。<span class="dot5"></span>纳指100过去5年实际年化约 <b>${ann5real}%</b>，但未来未必，收益率越高波动越大，谨慎乐观。<span class="dot5"></span>${judgeLine}`;
 }
 ['cAmt','cInit'].forEach(id=>$(id).addEventListener('input',renderCalc));
-$('cRate').addEventListener('input',renderCalc);
+$('cRate').addEventListener('input',()=>{renderCalc();userTouchedRate=true;const b=$('cUseJudge');if(b){b.textContent='📊 按研判建议年化';b.classList.remove('on');}});
+$('cUseJudge').addEventListener('click',()=>{userTouchedRate=false;applyJudgeToCalc();});
 /* ================= 实时刷新 ================= */
 function applyQuote(f){
   const p=+f[3];if(!(p>0))return false;
@@ -1323,7 +1347,7 @@ function refreshAll(manual){
   loadJin10();loadSina();
 }
 /* ================= Tab 切换 ================= */
-const TABS={home:['纳指100指数定投','NASDAQ 100 · 实时行情'],news:['财经资讯','金十数据 · 新浪财经'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本 · 复利计算']};
+const TABS={home:['纳指100指数定投','NASDAQ 100 · 实时行情'],news:['财经资讯','金十数据 · 新浪财经'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本']};
 const scrollMemo={home:0,news:0,judge:0,plan:0};
 let curTab='home';
 function switchTab(p){
