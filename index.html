@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21ae">
+<meta name="x-app-ver" content="2026.09.21af">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -145,19 +145,19 @@ section{margin-top:14px}
 .etfChip:not(.on) .badge.dn{color:#ef4444}
 .etfChip.on .badge{background:rgba(255,255,255,.22);color:#fff}
 .etfE{cursor:pointer}
-.lgE{display:grid;grid-template-columns:minmax(64px,1fr) 48px 48px 62px 66px;column-gap:6px;align-items:baseline;padding:7px 0;font-size:11.5px}
+.lgE{display:grid;grid-template-columns:minmax(52px,max-content) 44px 50px 60px 66px;column-gap:6px;align-items:baseline;padding:7px 0;font-size:11.5px}
 .lgE+.lgE{border-top:1px solid rgba(40,90,160,.10)}
 .lgE .nm{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--txt2)}
-.lgE .sh{color:var(--txt3);font-size:10.5px;text-align:right}
-.lgE .vv{font-weight:700;font-size:12.5px;text-align:right}
-.lgE .pp{text-align:right;font-weight:700;font-size:11.5px}
-.lgE .pa{text-align:right;font-weight:700;font-size:11.5px}
-.lgEh{display:grid;grid-template-columns:minmax(64px,1fr) 48px 48px 62px 66px;column-gap:6px;align-items:baseline;padding:0 0 6px;margin-bottom:2px;font-size:10px;color:var(--txt3);font-weight:600;border-bottom:1px solid rgba(40,90,160,.14)}
+.lgE .sh{color:var(--txt3);font-size:10.5px;text-align:left}
+.lgE .vv{font-weight:700;font-size:12.5px;text-align:left}
+.lgE .pp{text-align:left;font-weight:700;font-size:11.5px}
+.lgE .pa{text-align:left;font-weight:700;font-size:11.5px}
+.lgEh{display:grid;grid-template-columns:minmax(52px,max-content) 44px 50px 60px 66px;column-gap:6px;align-items:baseline;padding:0 0 6px;margin-bottom:2px;font-size:10px;color:var(--txt3);font-weight:600;border-bottom:1px solid rgba(40,90,160,.14)}
 .lgEh .nm{min-width:0}
-.lgEh .sh{color:var(--txt3);text-align:right}
-.lgEh .pp{text-align:right}
-.lgEh .vv{text-align:right}
-.lgEh .pa{text-align:right;white-space:nowrap}
+.lgEh .sh{color:var(--txt3);text-align:left}
+.lgEh .pp{text-align:left}
+.lgEh .vv{text-align:left}
+.lgEh .pa{text-align:left;white-space:nowrap}
 /* 溢价率条 */
 .pm{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
 .pmRow{display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:6px}
@@ -1722,7 +1722,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=7').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=8').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
