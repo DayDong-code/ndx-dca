@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.20n">
+<meta name="x-app-ver" content="2026.09.20o">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -334,7 +334,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
   <div class="page" id="page-news">
     <section id="secNews" class="card">
       <h3>📰 财经资讯<span class="sub">实时快讯 · 点击看原文</span><span class="right" id="newsUpd"></span></h3>
-      <div class="newsTabs" id="newsTabs"><span class="on" data-s="jin10">金十数据</span><span data-s="sina">新浪财经</span></div>
+      <div class="newsTabs" id="newsTabs"><span class="on" data-s="sina">新浪财经</span><span data-s="jin10">金十数据</span></div>
       <div id="newsList"></div>
     </section>
   </div>
@@ -1152,7 +1152,7 @@ cv.addEventListener('touchend',()=>{curHi=-1;drawChart();tip.style.display='none
 cv.addEventListener('mousemove',e=>tipAt(e.clientX));
 cv.addEventListener('mouseleave',()=>{curHi=-1;drawChart();tip.style.display='none'});
 /* ================= 资讯 ================= */
-let newsSrc='jin10';
+let newsSrc='sina';
 let newsData={jin10:SNAP.news.jin10||[],sina:SNAP.news.sina||[]};
 document.getElementById('newsTabs').addEventListener('click',e=>{
   const s=e.target.closest('span');if(!s)return;
@@ -1345,7 +1345,7 @@ function refreshAll(manual){
   loadJin10();loadSina();
 }
 /* ================= Tab 切换 ================= */
-const TABS={home:['纳指100指数定投','NASDAQ 100 · 实时行情'],news:['财经资讯','金十数据 · 新浪财经'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本']};
+const TABS={home:['纳指100指数定投','NASDAQ 100 · 实时行情'],news:['财经资讯','新浪财经 · 金十数据'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本']};
 const scrollMemo={home:0,news:0,judge:0,plan:0};
 let curTab='home';
 function switchTab(p){
