@@ -1,4 +1,4 @@
-/* 纳指100定投工作台 Service Worker  v9
+/* 纳指100定投工作台 Service Worker  v10
  * 目标：让"添加到主屏幕"的 PWA 每次都拿到最新页面，绝不卡在旧缓存上。
  * 关键修正（针对"刷新一直在转 / 页面停旧版"）：
  *   1. sw.js 自身 network-first —— 部署新 SW 时一定能拉到新脚本，保证自更新。
@@ -6,7 +6,7 @@
  *      哪怕旧页面没有监听 RELOAD 消息也能被换掉（旧版只 postMessage，旧页忽略就卡死）。
  *   3. HTML 导航 network-first + no-store + 时间戳绕过 CDN/浏览器缓存，强制最新。
  */
-const CACHE = 'ndx-dca-v9';
+const CACHE = 'ndx-dca-v10';
 const HTML = '/ndx-dca/';
 
 self.addEventListener('install', e => { self.skipWaiting(); });
