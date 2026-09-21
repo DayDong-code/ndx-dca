@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21x">
+<meta name="x-app-ver" content="2026.09.21y">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1096,32 +1096,12 @@ function renderLedger(){
   }else{
     $('lgEtfs').innerHTML='';
   }
-  /* 溢价率面板：全部=组合；单ETF=该ETF单独 */
+  /* 溢价率面板：仅单ETF视图显示；"全部"视图按需求隐藏组合溢价（买入均价溢价/组合当前溢价/解释文字） */
   if(isAll){
-    if(L.premAvg!=null||L.premNow!=null){
-      const pn=L.premNow!=null?L.premNow:1.5, pb=L.premAvg!=null?L.premAvg:1.5;
-      const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
-      const bar=v=>{ /* 溢价率条：0~5%，中点2.5% */
-        const w=Math.min(50,Math.abs(v)/5*50);
-        const c=v>=0?pcol(v):'#22c55e';
-        return `<div class="pmBar"><u style="${v>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`};background:${c}"></u><i></i></div>`;
-      };
-      $('pmBox').innerHTML=`
-        <div class="pmRow"><span class="k">买入均价溢价</span>
-          <span class="v" style="color:${pcol(pb)}">${pb>=0?'+':''}${pb.toFixed(2)}%</span>${bar(pb)}
-        </div>
-        <div class="pmRow"><span class="k">组合当前溢价</span>
-          <span class="v" style="color:${pcol(pn)}">${pn>=0?'+':''}${pn.toFixed(2)}%</span>${bar(pn)}
-        </div>
-        <div class="lgMeta" style="margin-top:2px">${
-          L.premPnl!=null
-            ? `溢价率影响（按各ETF当前溢价−买入均价溢价逐只汇总）：约 <b class="${L.premPnl>=0?'up':'dn'}">${L.premPnl>=0?'+':''}¥${fmt0(Math.abs(L.premPnl))}</b>（溢价收敛则亏、走阔则赚）`
-            : '多记几笔带溢价率的买入，就能看出溢价率对你的盈亏影响'
-        } · 组合当前溢价=持仓各ETF按市值加权的当前溢价率（现价÷最新单位净值−1，静态净值口径，与同花顺显示一致）</div>`;
-    }else{
-      $('pmBox').innerHTML='<div class="lgMeta">买入时填上「溢价率」，这里会显示溢价率对盈亏的影响</div>';
-    }
+    $('pmBox').style.display='none';
+    $('pmBox').innerHTML='';
   }else{
+    $('pmBox').style.display='';
     const pb=cur.premBuyAvg, pn=cur.premNow;
     if(pb!=null||pn!=null){
       const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
