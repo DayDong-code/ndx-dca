@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21y">
+<meta name="x-app-ver" content="2026.09.21z">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -161,6 +161,9 @@ section{margin-top:14px}
 .pmRow{display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:6px}
 .pmRow .k{width:52px;color:var(--txt3);flex-shrink:0}
 .pmRow .v{font-weight:700;min-width:56px}
+.pmInput{width:58px;font-weight:700;font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:var(--bg);color:inherit;text-align:right;outline:none;-moz-appearance:textfield}
+.pmInput::-webkit-outer-spin-button,.pmInput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.pmInput:focus{border-color:var(--accent)}
 .pmBar{flex:1;height:6px;border-radius:4px;background:rgba(40,90,160,.10);position:relative;overflow:hidden}
 .pmBar i{position:absolute;top:0;bottom:0;left:50%;width:2px;background:var(--txt3);opacity:.5;z-index:2}
 .pmBar u{position:absolute;top:0;bottom:0;border-radius:4px}
@@ -733,6 +736,7 @@ function animateBars(){
    计算：成本 = amt + fee ；市值 = share × 当前价 ；盈亏 = 市值 - 成本
 ================================================================ */
 const HKEY='ndx100_ledger_v2';
+const PKEY='ndx100_prem_override';   /* 单ETF「当前溢价」手动覆盖值：{code: 数值} */
 const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','513390':'纳指100ETF博时','513870':'纳指ETF富国','513110':'纳指ETF华泰柏瑞','159941':'纳指ETF广发','159501':'纳指ETF嘉实','159513':'纳斯达克100ETF大成','159632':'纳斯达克ETF华安','159659':'纳斯达克100ETF招商','159660':'纳指ETF汇添富','159696':'纳指ETF易方达'};
 /* 买入ETF下拉：由 ETFS 动态生成，保证与行情字典一致（官方简称），改 ETFS 即同步下拉 */
 (function(){const sel=document.getElementById('fEtf');if(!sel)return;
@@ -749,6 +753,10 @@ try{
   recs=raw?JSON.parse(raw):null;
 }catch(e){recs=null;}
 if(!Array.isArray(recs))recs=null;
+/* 单ETF「当前溢价」手动覆盖值（本地；不随账本云同步，iOS清缓存需重填） */
+let premOverride={};
+try{premOverride=JSON.parse(localStorage.getItem(PKEY)||'{}')||{}}catch(e){premOverride={}}
+function savePremOverride(){try{localStorage.setItem(PKEY,JSON.stringify(premOverride))}catch(e){}}
 /* 兼容旧版 v1 数据（只有 amt 的老记录）：迁移成新结构，价格用当日指数换算 */
 if(!recs){
   let old=null;try{old=JSON.parse(localStorage.getItem('ndx100_ledger_v1')||'null')}catch(e){}
@@ -1102,27 +1110,33 @@ function renderLedger(){
     $('pmBox').innerHTML='';
   }else{
     $('pmBox').style.display='';
-    const pb=cur.premBuyAvg, pn=cur.premNow;
-    if(pb!=null||pn!=null){
+    const pb=cur.premBuyAvg;
+    /* 当前溢价：优先用用户手动覆盖值，否则用实时价算出的 premNow */
+    const ov=(curEtf in premOverride)?premOverride[curEtf]:null;
+    const pn=(ov!=null)?ov:cur.premNow;
+    const hasPn=(pn!=null);
+    if(pb!=null||hasPn){
       const pcol=v=>v>2.5?'#f190ab':v>1?'#f59e0b':'#22c55e';
       const bar=v=>{
         const w=Math.min(50,Math.abs(v)/5*50);
         const c=v>=0?pcol(v):'#22c55e';
         return `<div class="pmBar"><u style="${v>=0?`left:50%;width:${w}%`:`right:50%;width:${w}%`};background:${c}"></u><i></i></div>`;
       };
-      const pp=(pn!=null&&pb!=null&&cur.mv>0)?cur.mv*(pn-pb)/100:null;
+      const pp=(hasPn&&pb!=null&&cur.mv>0)?cur.mv*(pn-pb)/100:null;
+      const pnVal=(pn==null)?'':Number(pn).toFixed(2);
+      const pnDisp=(pn==null)?'':(pn>=0?'+':'')+pnVal;
       $('pmBox').innerHTML=`
         <div class="pmRow"><span class="k">${cur.name.replace(/.*ETF/,'')}·买入均价溢价</span>
           <span class="v" style="color:${pcol(pb)}">${pb==null?'--':(pb>=0?'+':'')+pb.toFixed(2)+'%'}</span>${bar(pb)}
         </div>
         <div class="pmRow"><span class="k">当前溢价</span>
-          <span class="v" style="color:${pcol(pn)}">${pn==null?'--':(pn>=0?'+':'')+pn.toFixed(2)+'%'}</span>${bar(pn)}
+          <input class="pmInput" id="pmPremNow" type="number" step="0.01" inputmode="decimal" value="${pnVal}" placeholder="实时" title="可手动调节当前溢价率（留空则用实时值）" style="color:${pn==null?'var(--txt3)':pcol(pn)}">${bar(pn==null?0:pn)}
         </div>
         <div class="lgMeta" style="margin-top:2px">${
           pp!=null
             ? `溢价率影响（当前溢价−买入均价溢价）：约 <b class="${pp>=0?'up':'dn'}">${pp>=0?'+':''}¥${fmt0(Math.abs(pp))}</b>（溢价收敛则亏、走阔则赚）`
             : '记下「买入时溢价率」，就能对比当前溢价看是否买贵了'
-        }</div>`;
+        }${ov!=null?` · 已手动设为 <b>${pnDisp}%</b>`:''}</div>`;
     }else{
       $('pmBox').innerHTML='<div class="lgMeta">该ETF记一笔带「溢价率」的买入，这里会显示溢价率对盈亏的影响</div>';
     }
@@ -1672,6 +1686,16 @@ function boot(){
   setTimeout(()=>refreshAll(false),600);
   setInterval(()=>{if(!document.hidden)refreshAll(false)},60e3);
   setInterval(()=>{if(!document.hidden){loadJin10();loadSina()}},300e3);
+  /* 单ETF「当前溢价」手动调节：写覆盖值并重算溢价率影响 */
+  document.addEventListener('change',function(e){
+    if(e.target&&e.target.id==='pmPremNow'){
+      const v=(e.target.value||'').trim();
+      if(v===''||isNaN(parseFloat(v)))delete premOverride[curEtf];
+      else premOverride[curEtf]=parseFloat(v);
+      savePremOverride();
+      renderLedger();
+    }
+  });
 }
 boot();
 window.__selfTest=function(){
