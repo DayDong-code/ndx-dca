@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21z">
+<meta name="x-app-ver" content="2026.09.21aa">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1695,6 +1695,10 @@ function boot(){
       savePremOverride();
       renderLedger();
     }
+  });
+  /* 点击「当前溢价」输入框即全选原值，直接打字即可替换（无需手动删） */
+  document.addEventListener('focusin',function(e){
+    if(e.target&&e.target.id==='pmPremNow'){try{e.target.select()}catch(_){}}
   });
 }
 boot();
