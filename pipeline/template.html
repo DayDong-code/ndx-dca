@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21w">
+<meta name="x-app-ver" content="2026.09.21x">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -430,6 +430,10 @@ footer .src a{color:var(--txt2);margin:0 3px}
         <button class="btnSm" id="btnImport">⬆ 导入备份</button>
         <input type="file" id="fileLedger" accept="application/json,.json" hidden>
       </div>
+      <div class="bkRow" style="align-items:center">
+        <button class="btnSm" id="btnCloud" style="flex:0 0 auto;width:auto;padding:9px 14px">☁ 云同步</button>
+        <span id="cloudStat" style="font-size:11px;color:#7b8aa0;margin-left:6px">未连接</span>
+      </div>
       <div class="cnote" style="margin-top:12px"><b>指标说明</b><br>
       · <b>成本价</b>：实际成交价，市值 = 份额 × 当前价，不靠指数估算。<br>
       · <b>含佣金成本</b>：部分券商场内ETF免佣，按你实际填写计算。<br>
@@ -486,6 +490,24 @@ footer .src a{color:var(--txt2);margin:0 3px}
     <button class="ok" id="mOk">保存</button>
   </div>
 </div>
+
+<!-- 云同步设置弹层 -->
+<div class="mask" id="cloudMask">
+  <div class="modal" id="cloudModal">
+    <h4><span>☁ 云同步（GitHub Gist 备份）</span><span class="x" id="cloudClose">✕</span></h4>
+    <div class="fTip" style="line-height:1.6">账本自动备份到你的 <b>GitHub 私有 Gist</b>，换设备 / 清缓存 / 被系统清理后打开即恢复。<br>
+    首次需粘贴一个 <b>只勾 gist 权限</b> 的 Token（<a href="https://github.com/settings/tokens" target="_blank" rel="noopener" style="color:var(--brand)">点此生成</a>，勾 Gist 即可）。Token 只存本机，仅用于同步你的账本。</div>
+    <div class="fi"><label>GitHub Token</label><input id="cloudToken" type="password" placeholder="ghp_... 或 github_pat_..." autocomplete="off"></div>
+    <div id="cloudStatBig" style="font-size:12px;color:#7b8aa0;margin:2px 0 8px">状态：未连接</div>
+    <button class="ok" id="cloudConnect">连接并同步</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btnSm" id="cloudPush" style="flex:1">立即上传</button>
+      <button class="btnSm" id="cloudPull" style="flex:1">从云端恢复</button>
+      <button class="btnSm" id="cloudDisconnect" style="flex:1">断开</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -742,7 +764,85 @@ if(!Array.isArray(recs)){ /* 首次使用：预置示例，可删 */
     {d:'2026-08-17',code:'513100',name:'纳指ETF国泰',price:2.221,share:440,amt:977.24,fee:0,prem:1.16,note:'示例'},
   ];
 }
-function saveRecs(){try{localStorage.setItem(HKEY,JSON.stringify(recs))}catch(e){}}
+function saveRecs(){try{localStorage.setItem(HKEY,JSON.stringify(recs));}catch(e){console.warn('[ndx] 本地保存失败',e);toast('⚠ 账本没存进浏览器本地（隐私模式/存储已满/被禁用），重启会丢');return false}cloudSave();return true}
+/* ================= 云同步（GitHub Gist 自动备份） ================= */
+const CTOK='ndx100_cloud_token',CGID='ndx100_cloud_gist',CTS='ndx100_cloud_ts',CFILE='ndx-ledger.json';
+function cloudToken(){try{return localStorage.getItem(CTOK)||''}catch(e){return ''}}
+function cloudGid(){try{return localStorage.getItem(CGID)||''}catch(e){return ''}}
+function setCloudGid(id){try{localStorage.setItem(CGID,id)}catch(e){}}
+function cloudStatText(s){const e=$('cloudStat');if(e)e.textContent=s;const b=$('cloudStatBig');if(b)b.textContent='状态：'+s;}
+function gistReq(method,path,body){
+  return fetch('https://api.github.com'+path,{
+    method:method,
+    headers:{'Authorization':'Bearer '+cloudToken(),'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+    body:body?JSON.stringify(body):undefined
+  });
+}
+function cloudPayload(){return {app:'ndx100-dca',ver:2,exportedAt:new Date().toISOString(),recs:recs};}
+async function ensureGist(){
+  let gid=cloudGid();
+  if(gid)return gid;
+  try{const r=await gistReq('GET','/gists');
+    if(r.ok){const list=await r.json();
+      const hit=(list||[]).find(g=>g.description&&g.description.indexOf('ndx100-dca')>=0&&g.files&&g.files[CFILE]);
+      if(hit){setCloudGid(hit.id);return hit.id;}}}
+  catch(e){}
+  const r=await gistReq('POST','/gists',{description:'ndx100-dca 账本自动备份',public:false,files:{[CFILE]:{content:JSON.stringify(cloudPayload(),null,2)}}});
+  if(!r.ok)throw new Error('创建Gist失败 '+r.status);
+  const j=await r.json();setCloudGid(j.id);return j.id;
+}
+let _cloudBusy=false,_cloudTimer=null;
+function cloudSave(){if(!cloudToken())return;clearTimeout(_cloudTimer);_cloudTimer=setTimeout(()=>{_cloudTimer=null;_doCloudSave();},800);}
+async function _doCloudSave(){
+  if(_cloudBusy||!cloudToken())return;_cloudBusy=true;
+  try{
+    const gid=await ensureGist();
+    const r=await gistReq('PATCH','/gists/'+gid,{files:{[CFILE]:{content:JSON.stringify(cloudPayload(),null,2)}}});
+    if(r.ok){const t=Date.now();try{localStorage.setItem(CTS,t)}catch(e){};cloudStatText('已同步 '+new Date(t).toLocaleTimeString('zh-CN'));}
+    else if(r.status===404){setCloudGid('');await _doCloudSave();}
+    else console.warn('[cloud] 上传失败',r.status);
+  }catch(e){console.warn('[cloud] 上传异常',e);}
+  finally{_cloudBusy=false;}
+}
+async function cloudLoad(){
+  if(!cloudToken())return;const gid=cloudGid();if(!gid)return;
+  try{
+    const r=await gistReq('GET','/gists/'+gid);
+    if(!r.ok)return;
+    const j=await r.json();const f=j.files&&j.files[CFILE];if(!f||!f.content)return;
+    const data=JSON.parse(f.content);
+    if(data&&Array.isArray(data.recs)){
+      if(recs.length===0&&data.recs.length){recs=data.recs;saveRecs();renderLedger();toast('已从云端恢复 '+recs.length+' 笔');}
+      cloudStatText('云端可用 · '+new Date(data.exportedAt).toLocaleString('zh-CN'));
+    }
+  }catch(e){console.warn('[cloud] 拉取失败',e);}
+}
+async function cloudConnect(){
+  const tk=$('cloudToken').value.trim();
+  if(!tk){toast('请先粘贴 GitHub Token');return;}
+  try{localStorage.setItem(CTOK,tk)}catch(e){}
+  cloudStatText('连接中…');
+  try{
+    const r=await gistReq('GET','/user');
+    if(!r.ok){toast('Token 无效或无 gist 权限');cloudStatText('未连接');return;}
+    await ensureGist();await _doCloudSave();
+    toast('已连接并同步');cloudStatText('已同步');
+  }catch(e){toast('连接失败：'+(e&&e.message||e));cloudStatText('未连接');}
+}
+async function cloudPull(){
+  if(!cloudToken()){toast('请先连接');return;}
+  let gid=cloudGid();if(!gid){try{gid=await ensureGist();}catch(e){toast('未找到云端账本');return;}}
+  try{
+    const r=await gistReq('GET','/gists/'+gid);if(!r.ok){toast('拉取失败');return;}
+    const j=await r.json();const f=j.files&&j.files[CFILE];if(!f||!f.content){toast('云端没有数据');return;}
+    const data=JSON.parse(f.content);
+    if(data&&Array.isArray(data.recs)){recs=data.recs;saveRecs();renderLedger();toast('已从云端恢复 '+recs.length+' 笔');cloudStatText('已同步');}
+  }catch(e){toast('恢复失败');}
+}
+function cloudDisconnect(){
+  try{localStorage.removeItem(CTOK);localStorage.removeItem(CGID);}catch(e){}
+  cloudStatText('未连接');toast('已断开云同步');
+}
 /* 导出/导入备份：账本存在浏览器 localStorage，换设备/清缓存/重装PWA后会丢，
    用文件备份可随时恢复、也能跨设备迁移 */
 function exportLedger(){
@@ -1577,10 +1677,18 @@ $('btnToPlan').addEventListener('click',()=>switchTab('plan'));
 window.addEventListener('resize',()=>{if(curTab==='home')drawChart()});
 $('btnRefresh').addEventListener('click',()=>refreshAll(true));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshAll(false)});
+/* 云同步按钮绑定 */
+$('btnCloud').addEventListener('click',()=>{$('cloudToken').value=cloudToken();$('cloudMask').classList.add('show');cloudStatText(cloudToken()?'已连接':'未连接');});
+$('cloudClose').addEventListener('click',()=>$('cloudMask').classList.remove('show'));
+$('cloudConnect').addEventListener('click',cloudConnect);
+$('cloudPush').addEventListener('click',()=>{if(!cloudToken()){toast('请先连接');return;}_doCloudSave();toast('已触发上传');});
+$('cloudPull').addEventListener('click',cloudPull);
+$('cloudDisconnect').addEventListener('click',cloudDisconnect);
 /* ================= 启动 ================= */
 function boot(){
   renderQuote();renderScore();renderLedger();renderNews();renderCalc();updNewsTs();drawChart();
   $('ftSnap').textContent='内置数据快照 '+SNAP.builtAt+'（北京时间）';
+  if(cloudToken()){cloudStatText('连接中…');cloudLoad();}
   setTimeout(()=>refreshAll(false),600);
   setInterval(()=>{if(!document.hidden)refreshAll(false)},60e3);
   setInterval(()=>{if(!document.hidden){loadJin10();loadSina()}},300e3);
