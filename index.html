@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21ad">
+<meta name="x-app-ver" content="2026.09.21ae">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -124,11 +124,13 @@ section{margin-top:14px}
 .lgc .mvTag{font-size:10px;font-weight:700;margin-left:6px;padding:1px 5px;border-radius:4px;vertical-align:3px}
 .lgc .mvTag.lv{color:#16a34a;background:rgba(22,163,74,.13)}
 .lgc .mvTag.es{color:#d97706;background:rgba(217,119,6,.15)}
-.lgBar{display:flex;align-items:baseline;gap:7px;margin-top:13px;padding-top:11px;border-top:1px dashed var(--line)}
+.lgBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;padding-top:11px;border-top:1px dashed var(--line);flex-wrap:wrap}
+.lgBarMain{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;min-width:0}
+.lgBarSide{display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:0}
 .lgBar .t{font-size:10.5px;color:var(--txt3);flex-shrink:0}
 .lgBar b{font-size:16.5px;font-weight:800}
 .lgBar em{font-size:12px;font-style:normal;font-weight:700}
-.lgBar .ann{margin-left:auto;font-size:10.5px;color:var(--txt2);text-align:right}
+.lgBar .ann,.lgBar .lgReal{font-size:10.5px;color:var(--txt2);text-align:right;white-space:nowrap}
 .lgMeta{font-size:10.5px;color:var(--txt3);margin-top:9px}
 .up{color:var(--up)}.dn{color:var(--down)}
 /* 场内ETF账本：分ETF汇总 */
@@ -265,7 +267,7 @@ canvas{width:100%;display:block;border-radius:10px}
 .dirSeg button.on{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-color:transparent}
 .dirSeg button.on[data-t="S"]{background:linear-gradient(135deg,#ef5d6b,#d63a4a)}
 .miniBtn{float:right;margin:-2px 0 0 8px;padding:3px 9px;font-size:10.5px;font-weight:700;color:#ef5d6b;background:rgba(239,93,107,.12);border:1px solid rgba(239,93,107,.35);border-radius:7px}
-.lgReal{font-size:10.5px;font-weight:700;margin-left:7px}
+.lgReal{font-size:10.5px;font-weight:700}
 .lrow .tagS{display:inline-block;font-size:9.5px;font-weight:700;color:#fff;background:#ef5d6b;border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:1px}
 .lrow.sell .ltd b{color:#ef5d6b}
 /* ===== toast & footer ===== */
@@ -422,7 +424,10 @@ footer .src a{color:var(--txt2);margin:0 3px}
           <div class="lgc"><span>持仓成本（剩余）</span><b id="lgCost">--</b></div>
           <div class="lgc"><span>当前市值</span><b id="lgMv">--</b><i id="lgMvTag" class="mvTag"></i></div>
         </div>
-        <div class="lgBar"><span class="t">总收益</span><b id="lgPnl">--</b><em id="lgPct"></em><span class="ann" id="lgAnn"></span><span class="lgReal" id="lgReal"></span></div>
+        <div class="lgBar">
+          <div class="lgBarMain"><span class="t">总收益</span><b id="lgPnl">--</b><em id="lgPct"></em></div>
+          <div class="lgBarSide"><span class="ann" id="lgAnn"></span><span class="lgReal" id="lgReal"></span></div>
+        </div>
         <div class="lgMeta" id="lgMeta">--</div>
         <div class="lgEtfs" id="lgEtfs"></div>
         <div class="pm" id="pmBox"></div>
@@ -1717,7 +1722,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=6').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=7').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
