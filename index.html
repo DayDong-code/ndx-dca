@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21ag">
+<meta name="x-app-ver" content="2026.09.21ah">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -48,9 +48,6 @@ a{color:var(--brand);text-decoration:none}
 /* 顶部右侧：版本号 + 刷新按钮 容器 */
 .topRight{position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:14px;z-index:80;display:flex;align-items:center;gap:8px}
 .verLabel{font-size:10px;color:var(--txt3);background:var(--card);border:1px solid var(--line);padding:3px 9px;border-radius:14px;letter-spacing:.3px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(31,80,160,.08)}
-.updateBar{position:sticky;top:0;z-index:60;display:flex;align-items:center;justify-content:center;gap:6px;margin:0 0 8px;padding:9px 12px;font-size:12.5px;font-weight:600;color:#fff;background:linear-gradient(135deg,#2f7df6,#1e5fd0);border-radius:0 0 12px 12px;box-shadow:0 4px 14px rgba(31,80,160,.28)}
-.updateBar b{font-weight:800}
-.upBtn{margin-left:2px;padding:5px 14px;font-size:12.5px;font-weight:700;color:#1e5fd0;background:#fff;border:none;border-radius:8px;cursor:pointer}
 .refreshFab{position:static;width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--brand);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(31,80,160,.18)}
 .refreshFab:active{opacity:.6}
 .refreshFab svg{width:19px;height:19px}
@@ -287,10 +284,6 @@ footer .src a{color:var(--txt2);margin:0 3px}
   <button class="refreshFab" id="btnRefresh" aria-label="刷新行情">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" id="icoR"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg>
   </button>
-</div>
-
-<div id="updateBar" class="updateBar" hidden>
-  发现新版本 <b id="upVer"></b> · <button id="btnUpdate" class="upBtn">点此更新</button>
 </div>
 
 <div class="wrap">
@@ -1729,45 +1722,11 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=10').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=11').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
     navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.type==='RELOAD')doReload(); });
-
-    /* 自检查：5 秒后拉最新 HTML 比对版本号，若服务器已更新则弹出"点此更新"横条。
-       横条按钮会清空所有 SW 缓存并强制刷新，确保 iOS PWA 一定能拉到最新页面。 */
-    const doHardUpdate=()=>{
-      try{
-        caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k)))).then(()=>{
-          location.href=location.pathname+(location.search?'&':'?')+'_='+Date.now();
-        }).catch(()=>{ location.href=location.pathname+'?_='+Date.now(); });
-      }catch(e){ location.href=location.pathname+'?_='+Date.now(); }
-    };
-    const upBar=document.getElementById('updateBar'), upVer=document.getElementById('upVer');
-    if(document.getElementById('btnUpdate'))document.getElementById('btnUpdate').addEventListener('click',doHardUpdate);
-    const showUpdate=remote=>{
-      if(reloading)return; reloading=true;
-      if(upVer)upVer.textContent='v'+remote;
-      if(upBar)upBar.hidden=false;
-      /* 仍尝试自动刷新（iOS 若允许则直接更新；被吞掉则横条保留供手动点） */
-      setTimeout(()=>{ try{ doHardUpdate(); }catch(e){} },900);
-    };
-    setTimeout(()=>{
-      try{
-        fetch('./?_='+Date.now(),{cache:'no-store',credentials:'same-origin'})
-          .then(r=>r.text())
-          .then(html=>{
-            const m1=html.match(/<meta[^>]+x-app-ver[^>]+content="([^"]+)"/);
-            const m2=document.querySelector('meta[name="x-app-ver"]');
-            const remote=m1?m1[1]:''; const local=m2?m2.getAttribute('content'):'';
-            if(remote && remote!==local){
-              console.log('[ver-check] 服务器新版本',remote,'当前',local,'弹出更新横条');
-              showUpdate(remote);
-            }
-          }).catch(()=>{});
-      }catch(e){}
-    },5000);
   });
 }
 </script>
