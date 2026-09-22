@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21aj">
+<meta name="x-app-ver" content="2026.09.21ak">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1212,7 +1212,7 @@ function renderLedger(){
     <div class="lgrid">
       <div><span>卖出份额</span><b style="color:#ef5d6b">−${fmt0(r.share)}</b></div>
       <div><span>成交金额</span><b>${fmt(r.amt)}</b></div>
-      <div><span>佣金</span><b>${fmt(r.fee)}</b></div>
+      <div><span>溢价率</span><b>${r.premBuy!=null?r.premBuy.toFixed(2)+'%':'--'}</b></div>
       <div><span>收益率</span><b class="${ru?'up':'dn'}">${ru?'+':''}${retPct.toFixed(1)}%</b></div>
     </div></div>`;
   }).join(''):'<div class="newsEmpty">还没有交易记录，点下方按钮记第一笔吧</div>';
@@ -1755,7 +1755,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=13').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=14').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
