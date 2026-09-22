@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21ai">
+<meta name="x-app-ver" content="2026.09.21aj">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -133,6 +133,16 @@ section{margin-top:14px}
 .lgBar .ann,.lgBar .lgReal{font-size:10.5px;color:var(--txt2);text-align:right;white-space:nowrap}
 .lgMeta{font-size:10.5px;color:var(--txt3);margin-top:9px}
 .up{color:var(--up)}.dn{color:var(--down)}
+/* 收益归因卡：净值涨跌 / 溢价变动 两段堆叠 */
+.attrib{margin-top:10px;padding:9px 10px;background:rgba(40,90,160,.05);border:1px solid var(--line);border-radius:10px}
+.attribT{font-size:10.5px;color:var(--txt3);margin-bottom:6px}
+.attribBar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:#e9eef5}
+.attribBar i{display:block;height:100%;min-width:0}
+.attribLeg{display:flex;gap:14px;margin-top:6px;flex-wrap:wrap}
+.attribLeg span{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--txt2)}
+.attribLeg i{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.attribLeg b{font-weight:700;font-size:11px}
+.attribEmpty{font-size:10.5px;color:var(--txt3)}
 /* 场内ETF账本：分ETF汇总 */
 .lgEtfs{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
 /* ===== ETF 切换器 ===== */
@@ -428,6 +438,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
           <div class="lgBarMain"><span class="t">总收益</span><b id="lgPnl">--</b><em id="lgPct"></em></div>
           <div class="lgBarSide"><span class="ann" id="lgAnn"></span><span class="lgReal" id="lgReal"></span></div>
         </div>
+        <div class="attrib" id="attribBox"></div>
         <div class="lgMeta" id="lgMeta">--</div>
         <div class="lgEtfs" id="lgEtfs"></div>
         <div class="pm" id="pmBox"></div>
@@ -955,7 +966,7 @@ function ledgerCalc(){
   rows.forEach(r=>{
     if(firstDn===null||r.dn<firstDn)firstDn=r.dn;
     const k=r.code||r.name;
-    if(!byE[k])byE[k]={code:r.code,name:r.name,share:0,cost:0,realized:0,navCost:0,prems:[],invested:0};
+    if(!byE[k])byE[k]={code:r.code,name:r.name,share:0,cost:0,realized:0,navCost:0,prems:[],invested:0,realPrem:0};
     const e=byE[k];
     if(!r.isSell){
       e.share+=r.sh; e.cost+=r.amt+r.fee; e.invested+=r.amt+r.fee; investedAll+=r.amt+r.fee;
@@ -969,6 +980,9 @@ function ledgerCalc(){
       const sellCost=avg*ss;
       const realized=r.amt-sellCost-r.fee;       /* 实现盈亏 = 到手金额 − 卖出部分成本 − 佣金 */
       e.realized+=realized; r.realized=realized; r.sh=ss;
+      /* 已实现盈亏的溢价归因：卖出溢价 − 卖出前买入均价溢价，作用于卖出金额 */
+      const bAvg=e.prems.length?e.prems.reduce((a,b)=>a+b,0)/e.prems.length:null;
+      if(r.premBuy!=null&&bAvg!=null)e.realPrem+=r.amt*(r.premBuy-bAvg)/100;
       e.cost-=sellCost; e.share-=ss;
       if(e.share<=1e-9){e.share=0;e.cost=0;e.navCost=0;}
       else if(oldShare>0&&oldNav>0&&ss>0)e.navCost-=oldNav*(ss/oldShare);
@@ -979,17 +993,23 @@ function ledgerCalc(){
     const cur=etfCur(e.code,null,0);
     const mv=e.share*(cur.p||0);
     const unreal=mv-e.cost;                      /* 浮动盈亏 = 市值 − 剩余成本 */
+    const premBuyAvg=e.prems.length?e.prems.reduce((a,b)=>a+b,0)/e.prems.length:null;
+    const premNow=curPrem(e.code,null,0);
+    const heldPrem=(premNow!=null&&premBuyAvg!=null&&mv>0)?mv*(premNow-premBuyAvg)/100:0;
+    const premPart=heldPrem+(e.realPrem||0);     /* 溢价归因 = 持仓溢价影响 + 已实现溢价影响 */
+    const navPart=(e.realized+unreal)-premPart;  /* 净值涨跌归因 = 总盈亏 − 溢价部分 */
     return{...e,mv,mvLive:!!cur.live,curP:cur.p||0,unreal,
       avgCost:e.share>0?e.cost/e.share:0,
       pct:e.cost>0?unreal/e.cost*100:0,
-      premBuyAvg:e.prems.length?e.prems.reduce((a,b)=>a+b,0)/e.prems.length:null,
-      premNow:curPrem(e.code,null,0)};
+      premBuyAvg,premNow,premPart,realPrem:e.realPrem||0,navPart};
   }).sort((a,b)=>b.mv-a.mv);
   let mv=0,cost=0,realized=0,navCost=0,fee=0;
   etfList.forEach(e=>{mv+=e.mv;cost+=e.cost;realized+=e.realized;navCost+=e.navCost;});
+  let premPart=0; etfList.forEach(e=>{premPart+=(e.premPart||0);});
   recs.forEach(r=>{fee+= (+r.fee||0);});
   const unreal=mv-cost;
   const pnl=realized+unreal;                     /* 总收益 = 已实现 + 浮动 */
+  const navPart=pnl-premPart;                    /* 净值涨跌 = 总收益 − 溢价变动 */
   const dayN=firstDn!==null?Math.max(1,Math.floor(Date.now()/864e5)-firstDn):0;
   const months=firstDn!==null?Math.max(1,(Date.now()/864e5-firstDn)/30.44):0;
   /* 明细列表：买入按「整手市值−成本」展示浮动盈亏；卖出展示该笔已实现盈亏 */
@@ -1010,10 +1030,6 @@ function ledgerCalc(){
   let pNowW=0,pNowWV=0,pNowSum=0,pNowN=0;
   rows.forEach(r=>{if(!r.isSell&&r.premNow!=null){pNowW+=r.premNow*r.mv;pNowWV+=r.mv;pNowSum+=r.premNow;pNowN++}});
   const premNow=pNowWV>0?pNowW/pNowWV:(pNowN>0?pNowSum/pNowN:null);
-  /* 溢价造成的盈亏：逐ETF = 市值×(当前溢价−买入均价溢价)/100，再求和（仅未清仓部分） */
-  let premPnl=null,premPnlHas=false;
-  etfList.forEach(e=>{if(e.premNow!=null&&e.premBuyAvg!=null&&e.mv>0){premPnlHas=true;premPnl=(premPnl||0)+e.mv*(e.premNow-e.premBuyAvg)/100;}});
-  premPnl=premPnlHas?premPnl:null;
   /* XIRR：买入为负现金流、卖出为正现金流、末端为当前市值（资金加权年化） */
   const cfs=[];
   rows.forEach(r=>{cfs.push({t:r.dn*864e5,a:r.isSell?+(r.amt-r.fee):-(r.amt+r.fee)});});
@@ -1023,7 +1039,7 @@ function ledgerCalc(){
   return{rows:disp,etfList,cost,mv,pnl,unreal,realized,pct,dayN,ann,
     avgM:investedAll/months,n:recs.length,navCost,invested:investedAll,
     lastD:disp.length?disp[0].d:'',fee,premAvg,premNow,
-    mvLive:etfList.length?etfList.every(e=>e.mvLive):false,premPnl};
+    mvLive:etfList.length?etfList.every(e=>e.mvLive):false,premPart,navPart};
 }
 function renderLedger(){
   const L=ledgerCalc();
@@ -1073,6 +1089,23 @@ function renderLedger(){
     rz.textContent=`已实现 ${ru?'+':'-'}¥${fmt0(Math.abs(realized))}`;
     rz.style.color=ru?'var(--up)':'var(--down)';
   }else rz.textContent='';
+  /* 收益归因：总收益 = 净值涨跌 + 溢价变动（持仓溢价影响 + 已实现溢价影响，二者恒等于总收益） */
+  const ap = isAll ? L.premPart : (cur?cur.premPart:0);
+  const an = isAll ? L.navPart : (cur?(cur.realized+cur.unreal-cur.premPart):0);
+  const ab=$('attribBox');
+  if(!L.n || (Math.abs(an)+Math.abs(ap))<1e-6){
+    ab.innerHTML='<div class="attribEmpty">记一笔带溢价率的买入/卖出，这里会把总收益拆成「净值涨跌」和「溢价变动」两部分</div>';
+  }else{
+    const navCol=an>=0?'var(--up)':'var(--down)', premCol=ap>=0?'var(--up)':'var(--down)';
+    const t=Math.abs(an)+Math.abs(ap);
+    const wN=Math.min(100,Math.abs(an)/t*100), wP=Math.min(100,Math.abs(ap)/t*100);
+    ab.innerHTML=`<div class="attribT">收益归因（总收益 = 净值涨跌 + 溢价变动）</div>
+      <div class="attribBar">${wN>0?`<i style="width:${wN.toFixed(1)}%;background:${navCol}"></i>`:''}${wP>0?`<i style="width:${wP.toFixed(1)}%;background:${premCol}"></i>`:''}</div>
+      <div class="attribLeg">
+        <span><i style="background:${navCol}"></i>净值涨跌 <b class="${an>=0?'up':'dn'}">${an>=0?'+':'-'}¥${fmt0(Math.abs(an))}</b></span>
+        <span><i style="background:${premCol}"></i>溢价变动 <b class="${ap>=0?'up':'dn'}">${ap>=0?'+':'-'}¥${fmt0(Math.abs(ap))}</b></span>
+      </div>`;
+  }
   if(isAll){
     $('lgMeta').textContent=L.n
       ?`共 ${L.n} 笔（买${L.rows.filter(r=>!r.isSell).length}/卖${L.rows.filter(r=>r.isSell).length}） · ${L.etfList.length} 只ETF · 首笔至今 ${L.dayN} 天 · 累计投入 ¥${fmt0(L.invested)} · 月均约 ¥${fmt0(L.avgM)} · 净值折算投入 ¥${fmt0(L.navCost)}${L.fee>0?` · 佣金累计 ¥${fmt(L.fee)}`:''}`
@@ -1722,7 +1755,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=12').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=13').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
