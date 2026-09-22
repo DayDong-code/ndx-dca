@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21ah">
+<meta name="x-app-ver" content="2026.09.21ai">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -62,7 +62,7 @@ section{margin-top:14px}
 .card h3 .sub{font-size:11px;color:var(--txt3);font-weight:400}
 .card h3 .right{margin-left:auto;font-size:11px;color:var(--txt2);font-weight:400;white-space:nowrap;flex-shrink:0}
 /* ===== 底部Tab栏 ===== */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);background:linear-gradient(180deg,rgba(176,218,244,.95),rgba(88,166,215,.98));backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:5px 0 calc(5px + env(safe-area-inset-bottom))}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(146,206,238,.98);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:5px 0 calc(5px + env(safe-area-inset-bottom))}
 .tabbar button{background:none;border:none;color:var(--txt3);font-size:10.5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:5px 0 3px;font-family:inherit;transition:color .2s}
 .tabbar button svg{width:23px;height:23px;stroke-width:1.8}
 .tabbar button.on{color:var(--brand)}
@@ -1722,7 +1722,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=11').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=12').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
