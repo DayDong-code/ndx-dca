@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21ak">
+<meta name="x-app-ver" content="2026.09.21al">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -994,7 +994,7 @@ function ledgerCalc(){
     const mv=e.share*(cur.p||0);
     const unreal=mv-e.cost;                      /* 浮动盈亏 = 市值 − 剩余成本 */
     const premBuyAvg=e.prems.length?e.prems.reduce((a,b)=>a+b,0)/e.prems.length:null;
-    const premNow=curPrem(e.code,null,0);
+    const premNow=(e.code in premOverride)?premOverride[e.code]:curPrem(e.code,null,0);
     const heldPrem=(premNow!=null&&premBuyAvg!=null&&mv>0)?mv*(premNow-premBuyAvg)/100:0;
     const premPart=heldPrem+(e.realPrem||0);     /* 溢价归因 = 持仓溢价影响 + 已实现溢价影响 */
     const navPart=(e.realized+unreal)-premPart;  /* 净值涨跌归因 = 总盈亏 − 溢价部分 */
@@ -1755,7 +1755,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=14').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=16').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
