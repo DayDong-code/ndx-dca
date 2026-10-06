@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21am">
+<meta name="x-app-ver" content="2026.09.21an">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -652,8 +652,9 @@ function computeAll(cs,ds){
   const pos=mHi>mLo?(cur-mLo)/(mHi-mLo):0.5, s5=Math.max(0,Math.min(100,(1-pos)*100));
   const rank=mc.slice().sort((a,b)=>a-b).indexOf(cur)+1;
   const total=0.3*s1+0.2*s2+0.2*s3+0.2*s4+0.1*s5;
-  const ed=curETDate();
-  const mDays=tradingDaysTo(ed.y,ed.mo,ed.d); /* 用交易日历算"本月已过交易日"，比依赖数据数组更稳 */
+  /* 分母与分子(rank)严格同口径：本月「实际有收盘数据的」交易日数，而非日历口径
+     ——否则实时日期进入新月而快照滞后时，分母会变成新月的天数，与排序所用的旧月数据错位 */
+  const mDays=mc.length;
   return{cur,pct,s1,rD,rW,rM,avgR,s2,m200,dev,s3,peak,dd,s4,mLo,mHi,pos,s5,rank,mDays,total};
 }
 function grade(t){
@@ -715,7 +716,7 @@ function renderScore(){
     <div class="exp">${x.exp}</div></div>`).join('');
   animateBars();
   $('jMrNum').innerHTML=`第<span style="font-size:15px"> </span>${r.rank}<small> / ${r.mDays}</small>`;
-  $('jMrTxt').innerHTML=`<b style="color:var(--txt)">本月第${r.rank}便宜</b>（本月已过${r.mDays}个交易日）<br>${r.rank<=Math.ceil(r.mDays/3)?'当前是本月相对便宜的时间点':r.rank>=Math.ceil(r.mDays*2/3)?'当前是本月相对较贵的时间点':'价格在本月处于中游水平'}`;
+  $('jMrTxt').innerHTML=`<b style="color:var(--txt)">本月第${r.rank}便宜</b>（本月已记录${r.mDays}个交易日）<br>${r.rank<=Math.ceil(r.mDays/3)?'当前是本月相对便宜的时间点':r.rank>=Math.ceil(r.mDays*2/3)?'当前是本月相对较贵的时间点':'价格在本月处于中游水平'}`;
   /* —— 5年关键数据 —— */
   const d0=dOf(days[0]);
   const yrs=(days[days.length-1]-days[0])/365.25;
@@ -1755,7 +1756,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=17').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=20').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
