@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#64aede">
-<meta name="x-app-ver" content="2026.09.21an">
+<meta name="x-app-ver" content="2026.09.21ao">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
@@ -1584,8 +1584,23 @@ function applyQuote(f){
   const curDay=Math.floor(Date.UTC(y,mo-1,d)/864e5);
   const wd=new Date(Date.UTC(y,mo-1,d)).getUTCDay();
   if(wd!==0&&wd!==6){
-    if(curDay===days[days.length-1])closes[closes.length-1]=Math.round(q.p*100)/100;
-    else if(curDay>days[days.length-1]){days.push(curDay);closes.push(Math.round(q.p*100)/100)}
+    if(curDay===days[days.length-1]){
+      closes[closes.length-1]=Math.round(q.p*100)/100;
+    }else if(curDay>days[days.length-1]){
+      /* 补齐「本月1日→今天」之间漏掉的交易日（用最近已知收盘价近似，今天用真实价），
+         否则快照滞后时本月只有实时更新的当天，导致「本月第几便宜/共N个交易日」严重失真 */
+      const hs=usHolidays(y);
+      const monthStart=Math.floor(Date.UTC(y,mo-1,1)/864e5);
+      let dd=Math.max(days[days.length-1]+1, monthStart);
+      const lastC=closes[closes.length-1];
+      for(; dd<=curDay; dd++){
+        const w=new Date(dd*864e5).getUTCDay();
+        if(w===0||w===6)continue;
+        if(hs.has(y+'-'+mo+'-'+(dd-monthStart+1)))continue;
+        days.push(dd);
+        closes.push(dd===curDay?Math.round(q.p*100)/100:lastC);
+      }
+    }
   }
   return true;
 }
@@ -1756,7 +1771,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=20').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=21').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
