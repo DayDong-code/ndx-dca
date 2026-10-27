@@ -28,33 +28,48 @@ class RConn(http.client.HTTPSConnection):
             self.sock = ctx.wrap_socket(socket.create_connection((HOST, 443), 15),
                                        server_hostname=HOST)
 
-def call(method, path, body=None, debug=False):
-    c = RConn(HOST, 443, timeout=30)
-    data = json.dumps(body).encode() if body is not None else None
-    headers = {
-        "Host": HOST,
-        "Authorization": f"Bearer {TOKEN}",
-        "User-Agent": "ndx-deploy",
-        "Accept": "application/vnd.github+json",
-    }
-    if data:
-        headers["Content-Type"] = "application/json"
-    c.request(method, path, body=data, headers=headers)
-    r = c.getresponse()
-    raw = r.read().decode()
-    c.close()
-    if debug:
-        print("RAW:", raw[:400])
-    try:
-        j = json.loads(raw)
-    except Exception:
-        j = raw
-    return r.status, j
+def call(method, path, body=None, debug=False, retry=2):
+    """带重试的 API 调用：沙箱到 GitHub 的连接偶发截断/断连，重试可显著提高成功率"""
+    last = None
+    for attempt in range(retry + 1):
+        try:
+            c = RConn(HOST, 443, timeout=30)
+            data = json.dumps(body).encode() if body is not None else None
+            headers = {
+                "Host": HOST,
+                "Authorization": f"Bearer {TOKEN}",
+                "User-Agent": "ndx-deploy",
+                "Accept": "application/vnd.github+json",
+            }
+            if data:
+                headers["Content-Type"] = "application/json"
+            c.request(method, path, body=data, headers=headers)
+            r = c.getresponse()
+            raw = r.read().decode()
+            c.close()
+            if debug:
+                print("RAW:", raw[:400])
+            try:
+                j = json.loads(raw)
+            except Exception:
+                j = raw
+            return r.status, j
+        except Exception as e:
+            last = e
+            if attempt < retry:
+                import time
+                time.sleep(2)
+    raise last
 
 def get_sha(path):
-    st, j = call("GET", f"/repos/{REPO}/contents/{path}")
-    if st == 200 and isinstance(j, dict) and "sha" in j:
-        return j["sha"]
+    """用 Git Trees API 取顶层文件 sha：响应只有几 KB，比 Contents API
+    （会把 index.html 全文 700KB+ 拉回来）稳定得多，网络差时不会 IncompleteRead"""
+    branch = "main"
+    st, j = call("GET", f"/repos/{REPO}/git/trees/{branch}")
+    if st == 200 and isinstance(j, dict):
+        for it in j.get("tree", []):
+            if it.get("path") == path:
+                return it["sha"]
     return None  # 文件不存在（首次创建）
 
 def upsert(path, content_bytes, message):
