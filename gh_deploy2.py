@@ -94,6 +94,21 @@ def bump_sw_version():
 
 bump_sw_version()
 
+# 0.5 把 App 版本号写成"当天日期"，让手动与每日自动刷新都反映数据/部署新鲜度，
+# 避免版本号停在一个旧功能版本号（如 21ar）却已含最新数据造成的误导。
+def bump_appver_date():
+    import datetime
+    today = datetime.date.today().strftime("%Y.%m.%d")
+    for fp in [ART + "template.html", ART + "index.html", "/workspace/ndx-dca.html"]:
+        if not os.path.exists(fp):
+            continue
+        t = open(fp, "r", encoding="utf-8").read()
+        t2 = re.sub(r'x-app-ver"\s*content="[^"]*"', 'x-app-ver" content="%s"' % today, t)
+        if t2 != t:
+            open(fp, "w", encoding="utf-8").write(t2)
+    print("App 版本号更新为当天日期:", today)
+bump_appver_date()
+
 # 1. 上传 index.html（由 assemble.py 生成在 ART 目录）
 html = open(ART + "index.html", "rb").read()
 print("上传 index.html (%d bytes) ..." % len(html))
@@ -114,16 +129,13 @@ print("上传 build_snapshot.py (%d bytes) ..." % len(bs))
 upsert("build_snapshot.py", bs, "deploy: 同步构建脚本（日历日期修复）")
 
 # 2.7 同步全部构建源到仓库根，使 GitHub Action 每日自动刷新时能完整复现构建环境
+# 注意：daily.yml（每日自动刷新 workflow）不在此处上传——GitHub Contents API 不支持
+#       创建 .github 目录下的文件，需通过 git 提交（见 daily.yml 说明），否则会返回 404。
 SRC = ["template.html", "assemble.py", "gh_deploy2.py", "build_snapshot.py", "ndx_5y.json", "sw.js"]
 for f in SRC:
     p = ART + f
     if os.path.exists(p):
         upsert(f, open(p, "rb").read(), "sync build source: " + f)
-
-# 2.8 部署每日自动刷新 workflow（首次创建，之后幂等覆盖）
-wf = ART + "daily.yml"
-if os.path.exists(wf):
-    upsert(".github/workflows/daily.yml", open(wf, "rb").read(), "deploy: 添加每日自动刷新 workflow")
 
 # 注意：不要把构建管线源码(pipeline/)上传到 Pages 仓库根目录！
 # 该目录会导致 GitHub Pages 构建瞬间失败(errored, duration 0)，
