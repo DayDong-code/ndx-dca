@@ -357,8 +357,8 @@ footer .src a{color:var(--txt2);margin:0 3px}
     </div>
     <!-- 指数切换器：纳指100 / 标普500 -->
     <div class="idxSwitch" id="idxSwitch">
-      <button data-i="ndx"><i class="dotIdx" style="background:#2C8AFF"></i>纳指100<span class="pct" id="idxPctNdx"></span></button>
       <button data-i="spx"><i class="dotIdx" style="background:#F08A24"></i>标普500<span class="pct" id="idxPctSpx"></span></button>
+      <button data-i="ndx"><i class="dotIdx" style="background:#2C8AFF"></i>纳指100<span class="pct" id="idxPctNdx"></span></button>
     </div>
     <section id="secOverview" class="card ovCard">
       <h3>📊 双指数对比<span class="sub">点一行切换</span></h3>
@@ -635,8 +635,8 @@ const IDX_CFG = {
     etfs:{'513500':'标普500ETF博时','159612':'标普500ETF南方','159655':'标普500ETF华夏','513650':'标普500ETF南方','159502':'标普500ETF嘉实'},
   },
 };
-const IDX_KEYS = Object.keys(IDX_CFG);
-let curIdxKey = 'ndx';
+const IDX_KEYS = ['spx','ndx'];   /* 展示顺序：标普500 在前，纳指100 在后 */
+let curIdxKey = 'spx';            /* 首次进入默认选中标普500 */
 try{ const s=localStorage.getItem('ndx100_cur_index'); if(s&&IDX_CFG[s])curIdxKey=s; }catch(e){}
 const IX = ()=>IDX_CFG[curIdxKey];
 const SNAPIDX = ()=> (SNAP.idx && SNAP.idx[curIdxKey]) || (SNAP.idx&&SNAP.idx.ndx) || {days:[],closes:[],quote:{},ind:{}};
@@ -1435,7 +1435,17 @@ function openModal(r){
   $('mTitle').textContent=(editIdx>=0?'编辑':'记一笔')+(type==='S'?'卖出':'买入');
   $('fDate').value=r?r.d:todayStr();$('fDate').max=todayStr();
   const known=r&&etfsOf()[r.code]?r.code:'';
-  $('fEtf').value = r ? (known||'159941') : (curEtf || known || '159941');
+  /* 默认选中的ETF：编辑时用原代码；新建时优先级 = 已聚焦ETF > 标普500ETF南方 > 该指数清单首项 */
+  const defEtf=(function(){
+    const m=etfsOf();
+    for(const c in m){ if(m[c].indexOf('标普500ETF南方')>=0) return c; }  /* 优先匹配「标普500ETF南方」 */
+    for(const c in m){ if(c==='159612') return c; }
+    for(const c in m){ return c; }
+    return '';
+  })();
+  /* curEtf 只在属于当前指数的清单时才沿用，避免切指数后残留旧代码 */
+  $('fEtf').value = r ? (known||defEtf) : ((curEtf&&etfsOf()[curEtf]) ? curEtf : defEtf);
+  if(!$('fEtf').value && $('fEtf').options.length)$('fEtf').selectedIndex=0;
   $('fPrice').value=r?r.price:'';
   $('fShare').value=r?r.share:'';
   $('fAmt').value=r?r.amt:'';
