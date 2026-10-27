@@ -1,0 +1,30 @@
+name: 每日刷新纳指数据
+
+on:
+  schedule:
+    # UTC 22:30 = 北京次工作日 06:30/07:30（美股收盘后），周一至周五运行
+    - cron: '30 22 * * 1-5'
+  workflow_dispatch:   # 允许在 Actions 页面手动触发
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install pillow numpy
+
+      - name: 刷新数据 + 组装 + 部署
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+          GH_API_IP: ""   # 留空 -> 走 api.github.com 域名解析（沙箱才用硬编码 IP）
+        run: |
+          python build_snapshot.py
+          python assemble.py
+          python gh_deploy2.py
