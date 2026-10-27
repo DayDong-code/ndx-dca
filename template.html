@@ -489,7 +489,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
         <div class="it"><span>年化收益</span><b id="stAnn">--</b></div>
         <div class="it"><span>距高点回撤</span><b id="stDd">--</b></div>
       </div>
-      <div class="cnote" style="margin-top:12px">历史数据来自纳斯达克官方日线收盘价（2021年9月至今），评分每天随行情自动更新。分位、回撤等指标用于衡量"当前价格在历史上的相对贵贱"，不预测未来走势。</div>
+      <div class="cnote" style="margin-top:12px">历史数据为两大指数的真实日线收盘价（纳指100 来自纳斯达克官方、标普500 来自新浪美股，2021年9月至今），每天自动更新。分位、回撤等指标用于衡量"当前价格在历史上的相对贵贱"，不预测未来走势。</div>
     </section>
     <section id="secCalc" class="card">
       <h3>🧮 复利计算器<span class="sub">年化按研判建议</span></h3>
@@ -823,7 +823,7 @@ function renderScore(){
   const cheapTxt=r.pct>0.8?`比过去5年里${Math.round(r.pct*100)}%的时间都贵`:r.pct<0.2?`比过去5年里${Math.round((1-r.pct)*100)}%的时间都便宜`:`处于过去5年的中间位置（${Math.round(r.pct*100)}%分位）`;
   const devTxt=r.dev>=0?`高出${r.dev.toFixed(1)}%`:`低${Math.abs(r.dev).toFixed(1)}%`;
   const ddTxt=r.dd>-0.05?'距离高点只回落了不到5%，回调很浅':r.dd>-0.15?`距离高点回落了${Math.abs(r.dd*100).toFixed(1)}%`:`已经从高点回调了${Math.abs(r.dd*100).toFixed(1)}%，回调较深`;
-  $('jPlain').innerHTML=`<b>大白话：</b>现在纳指100在 <b>${fmt(r.cur)}</b> 点，${cheapTxt}；现价比200日均线（近一年的平均成本价 ${fmt0(r.m200)}）${devTxt}；${ddTxt}。综合下来今天得分 <b style="color:${g.c}">${Math.round(r.total)}分</b>（${g.label}）。${g.advice}`;
+  $('jPlain').innerHTML=`<b>大白话：</b>现在${IX().short}在 <b>${fmt(r.cur)}</b> 点，${cheapTxt}；现价比200日均线（近一年的平均成本价 ${fmt0(r.m200)}）${devTxt}；${ddTxt}。综合下来今天得分 <b style="color:${g.c}">${Math.round(r.total)}分</b>（${g.label}）。${g.advice}`;
   const rows=[
     {n:'价格分位',w:'权重30%',v:r.s1,pct:r.s1,exp:`当前点数位于近5年收盘价的${Math.round(r.pct*100)}%分位 —— ${r.pct>0.85?'历史高位，明显偏贵':r.pct>0.6?'偏高':r.pct>0.4?'中等水平':r.pct>0.15?'偏低，相对便宜':'历史低位，非常便宜'}`},
     {n:'日/周/月RSI',w:'权重20%',v:r.s2,pct:r.s2,exp:`日线RSI ${r.rD.toFixed(0)}、周线 ${r.rW.toFixed(0)}、月线 ${r.rM.toFixed(0)} —— ${r.avgR<35?'多周期超卖，跌得比较充分':r.avgR<55?'情绪中性，没有超买超卖':r.avgR<65?'偏强，短期没有回调迹象':'偏热，涨多了需要警惕'}`},
@@ -1739,7 +1739,7 @@ function renderCalc(){
     </div>`}).join('');
   const _cr=SNAPIDX().closes||[]; const ann5real=((Math.pow(_cr[_cr.length-1]/_cr[0],1/5)-1)*100).toFixed(1);
   const judgeLine=JUDGE.adv>0?`当前按研判建议年化 <b>${JUDGE.adv.toFixed(1)}%</b>（评分${JUDGE.total} · 5年分位${Math.round(JUDGE.pct*100)}%）计算，可拖动上/下调。`:'';
-  $('cNote').innerHTML=`每月投 <b>¥${fmt0(A)}</b>${P0?`、已有本金 ¥${fmt0(P0)}`:''}，按年化 <b>${r}%</b> 复利滚动：10年约 <b>¥${fmt0(fv(P0,A,r,10))}</b>，15年约 <b>¥${fmt0(fv(P0,A,r,15))}</b>，20年约 <b>¥${fmt0(fv(P0,A,r,20))}</b>。本金是蓝色的部分，绿色是复利帮你赚的。<span class="dot5"></span>纳指100过去5年实际年化约 <b>${ann5real}%</b>，但未来未必，收益率越高波动越大，谨慎乐观。<span class="dot5"></span>${judgeLine}`;
+  $('cNote').innerHTML=`每月投 <b>¥${fmt0(A)}</b>${P0?`、已有本金 ¥${fmt0(P0)}`:''}，按年化 <b>${r}%</b> 复利滚动：10年约 <b>¥${fmt0(fv(P0,A,r,10))}</b>，15年约 <b>¥${fmt0(fv(P0,A,r,15))}</b>，20年约 <b>¥${fmt0(fv(P0,A,r,20))}</b>。本金是蓝色的部分，绿色是复利帮你赚的。<span class="dot5"></span>${IX().short}过去5年实际年化约 <b>${ann5real}%</b>，但未来未必，收益率越高波动越大，谨慎乐观。<span class="dot5"></span>${judgeLine}`;
 }
 ['cAmt','cInit'].forEach(id=>$(id).addEventListener('input',renderCalc));
 $('cRate').addEventListener('input',()=>{renderCalc();userTouchedRate=true;const b=$('cUseJudge');if(b){b.textContent='📊 按研判建议年化';b.classList.remove('on');}});
@@ -2071,7 +2071,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=35').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=36').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
