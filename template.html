@@ -42,6 +42,31 @@ a{color:var(--brand);text-decoration:none}
 @keyframes rot{to{transform:rotate(360deg)}}
 /* ===== 首页顶部标题（非固定，随页面滚动） ===== */
 .homeHead{display:flex;align-items:center;gap:10px;padding:12px 2px 2px}
+/* 指数切换器（分段控件式） */
+.idxSwitch{display:flex;gap:6px;margin:10px 0 2px;padding:4px;border-radius:12px;background:rgba(255,255,255,.45);border:1px solid var(--line)}
+.idxSwitch button{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 6px;font:inherit;font-size:13.5px;font-weight:700;color:var(--txt2);cursor:pointer;transition:.22s;display:flex;align-items:center;justify-content:center;gap:5px;line-height:1.2}
+.idxSwitch button .pct{font-size:11px;font-weight:600;opacity:.8}
+.idxSwitch button.on{background:#fff;color:var(--txt);box-shadow:0 3px 10px rgba(31,80,160,.16)}
+.idxSwitch button.on[data-i="ndx"]{color:#1565d8;box-shadow:0 3px 10px rgba(44,138,255,.28)}
+.idxSwitch button.on[data-i="spx"]{color:#c96a10;box-shadow:0 3px 10px rgba(240,138,36,.28)}
+.idxSwitch button .dotIdx{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+/* 双指数概览卡：两行各自评分，点击切换 */
+.ovCard{padding:12px 14px}
+.ovCard h3{margin-bottom:10px}
+.ovRow{display:flex;align-items:center;gap:12px;padding:10px 8px;border-radius:12px;cursor:pointer;transition:.2s;border:1px solid transparent}
+.ovRow+.ovRow{margin-top:6px}
+.ovRow:active{transform:scale(.985)}
+.ovRow.on{background:#fff;border-color:var(--line);box-shadow:0 3px 12px rgba(31,80,160,.14)}
+.ovBar{width:4px;height:34px;border-radius:3px;flex-shrink:0}
+.ovMid{flex:1;min-width:0}
+.ovName{font-size:14.5px;font-weight:800;color:var(--txt);display:flex;align-items:baseline;gap:6px;line-height:1.3}
+.ovName em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--txt3)}
+.ovSub{font-size:11.5px;color:var(--txt2);margin-top:3px;line-height:1.35}
+.ovRight{text-align:right;flex-shrink:0}
+.ovScore{font-size:21px;font-weight:800;line-height:1.05}
+.ovScore i{font-style:normal;font-size:10.5px;font-weight:600;color:var(--txt3);margin-left:1px}
+.ovGrade{font-size:10.5px;font-weight:700;margin-top:3px;white-space:nowrap}
+.ovChg{font-size:11px;font-weight:700;margin-top:2px}
 .avatar{width:40px;height:40px;border-radius:9px;object-fit:cover;flex-shrink:0;box-shadow:0 3px 10px rgba(47,107,255,.35)}
 .homeTitle{font-size:19px;font-weight:800;color:var(--txt);letter-spacing:.3px}
 /* ===== 右上角圆形刷新按钮（固定浮层） ===== */
@@ -330,6 +355,16 @@ footer .src a{color:var(--txt2);margin:0 3px}
       <img class="avatar" src="data:image/jpeg;base64,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" alt="Day">
       <div class="homeTitle">Day的AI定投</div>
     </div>
+    <!-- 指数切换器：纳指100 / 标普500 -->
+    <div class="idxSwitch" id="idxSwitch">
+      <button data-i="ndx"><i class="dotIdx" style="background:#2C8AFF"></i>纳指100<span class="pct" id="idxPctNdx"></span></button>
+      <button data-i="spx"><i class="dotIdx" style="background:#F08A24"></i>标普500<span class="pct" id="idxPctSpx"></span></button>
+    </div>
+    <section id="secOverview" class="card ovCard">
+      <h3>📊 双指数对比<span class="sub">点一行切换</span></h3>
+      <div id="ovList"></div>
+    </section>
+
     <section id="secQuote" class="card">
       <div class="qname"><b style="color:var(--txt);font-size:15px" id="qName">纳斯达克100</b><span id="qCode">.NDX</span><span class="mkt open" id="mkt">交易中</span></div>
       <div class="qprice">
@@ -365,7 +400,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
     </section>
 
     <section id="secCal" class="card">
-      <h3>📅 纳指100日历<span class="sub">每日真实收盘点数</span>
+      <h3>📅 <span id="calIdxName">纳指100</span>日历<span class="sub">每日真实收盘点数</span>
         <span class="right calNav">
           <button class="calArrow" id="calPrev" aria-label="上个月">‹</button>
           <b id="calTitle">--</b>
@@ -579,6 +614,36 @@ footer .src a{color:var(--txt2);margin:0 3px}
 const SNAP = __SNAP__;
 </script>
 <script>
+/* ================= 多指数配置 =================
+   一个 DOM、两套数据：切换指数时把 days/closes/quote/recs 整体换掉，再统一重渲染。
+   这样所有渲染函数（行情/评分/日历/走势/账本）都无需感知"当前是哪个指数"。
+   ddScale：s4 回撤评分满分阈值，取各自近5年真实最大回撤（实测 ndx 35.56% / spx 25.43%），
+            使两个指数的"深度回调"口径可比——照抄纳指的 0.35 会让标普永远拿不到高分。 */
+const IDX_CFG = {
+  ndx: {
+    key:'ndx', name:'纳斯达克100', short:'纳指100', code:'.NDX',
+    tencentSym:'usNDX', color:'#2C8AFF', colorDim:'rgba(44,138,255,.12)',
+    hkey:'ndx100_ledger_v2', pkey:'ndx100_prem_override',
+    ddScale:0.3556,
+    etfs:{'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','513390':'纳指100ETF博时','513870':'纳指ETF富国','513110':'纳指ETF华泰柏瑞','159941':'纳指ETF广发','159501':'纳指ETF嘉实','159513':'纳斯达克100ETF大成','159632':'纳斯达克ETF华安','159659':'纳斯达克100ETF招商','159660':'纳指ETF汇添富','159696':'纳指ETF易方达'},
+  },
+  spx: {
+    key:'spx', name:'标普500', short:'标普500', code:'.INX',
+    tencentSym:'us.INX', color:'#F08A24', colorDim:'rgba(240,138,36,.12)',
+    hkey:'spx500_ledger_v2', pkey:'spx500_prem_override',
+    ddScale:0.2543,
+    etfs:{'513500':'标普500ETF博时','159612':'标普500ETF南方','159655':'标普500ETF华夏','513650':'标普500ETF南方','159502':'标普500ETF嘉实'},
+  },
+};
+const IDX_KEYS = Object.keys(IDX_CFG);
+let curIdxKey = 'ndx';
+try{ const s=localStorage.getItem('ndx100_cur_index'); if(s&&IDX_CFG[s])curIdxKey=s; }catch(e){}
+const IX = ()=>IDX_CFG[curIdxKey];
+const SNAPIDX = ()=> (SNAP.idx && SNAP.idx[curIdxKey]) || (SNAP.idx&&SNAP.idx.ndx) || {days:[],closes:[],quote:{},ind:{}};
+/* 兼容旧快照结构（无 idx 字段） */
+if(!SNAP.idx){ SNAP.idx={ndx:{days:SNAP.days||[],closes:SNAP.closes||[],quote:SNAP.quote||{},ind:SNAP.ind||{},ddScale:0.3556}}; }
+</script>
+<script>
 /* ================= 工具 ================= */
 const $=id=>document.getElementById(id);
 const fmt=(n,d=2)=>Number(n).toLocaleString('zh-CN',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -643,10 +708,16 @@ function relTime(tm){
   if(diff<43200)return Math.floor(diff/1440)+'天前';
   return tm.slice(5,11);
 }
-/* ================= 状态 ================= */
-let days=SNAP.days.slice(),closes=SNAP.closes.slice();
-let quote={...SNAP.quote};
-let liveOK=false;
+/* ================= 状态（随指数切换整体重载） ================= */
+let days, closes, quote, liveOK=false;
+function loadIdxState(){
+  const s=SNAPIDX();
+  days=(s.days||[]).slice();
+  closes=(s.closes||[]).slice();
+  quote={...(s.quote||{})};
+  liveOK=false;
+}
+loadIdxState();
 
 function marketState(){
   const et=quote.timeET||'';const[n,t]=et.split(' ');const[y,mo,d]=n.split('-').map(Number);const[h,mi]=t.split(':').map(Number);
@@ -675,7 +746,8 @@ function isoWeek(dt){
   const fn=(ft.getUTCDay()+6)%7;ft.setUTCDate(ft.getUTCDate()-fn+3);
   return d.getUTCFullYear()+'-'+(1+Math.round((d-ft)/6048e5));
 }
-function computeAll(cs,ds){
+function computeAll(cs,ds,ddScale){
+  const dds=(ddScale>0)?ddScale:IX().ddScale;
   const cur=cs[cs.length-1],N=cs.length;
   let below=0;for(const c of cs)if(c<=cur)below++;
   const pct=below/N, s1=Math.max(0,Math.min(100,(1-pct)*100));
@@ -690,7 +762,7 @@ function computeAll(cs,ds){
   const rW=rsiW(wk),rM=rsiW(mo),avgR=(rD+rW+rM)/3, s2=Math.max(0,Math.min(100,100-avgR));
   const m200=cs.slice(-200).reduce((a,b)=>a+b,0)/Math.min(200,N);
   const dev=(cur-m200)/m200, s3=Math.max(0,Math.min(100,50-dev*250));
-  const peak=Math.max(...cs), dd=(cur-peak)/peak, s4=Math.max(0,Math.min(100,Math.abs(dd)/0.35*100));
+  const peak=Math.max(...cs), dd=(cur-peak)/peak, s4=Math.max(0,Math.min(100,Math.abs(dd)/dds*100));
   const last=dOf(ds[N-1]),mk=last.getUTCFullYear()+'-'+last.getUTCMonth();
   const mc=[];for(let i=N-1;i>=0;i--){const dt=dOf(ds[i]);if(dt.getUTCFullYear()+'-'+dt.getUTCMonth()!==mk)break;mc.push(cs[i]);}
   const mLo=Math.min(...mc),mHi=Math.max(...mc);
@@ -726,6 +798,10 @@ function renderQuote(){
 /* ================= 渲染：评分（首页摘要 + 研判详情） ================= */
 function renderScore(){
   const r=computeAll(closes,days), g=grade(r.total);
+  /* 指数名称/代码/日历标题随当前指数更新 */
+  const qn=$('qName');if(qn)qn.textContent=IX().name;
+  const qc=$('qCode');if(qc)qc.textContent=IX().code;
+  const ct=$('calIdxName');if(ct)ct.textContent=IX().short;
   const dt=dOf(days[days.length-1]);
   const dstr=`${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
   /* —— 首页摘要 —— */
@@ -776,7 +852,7 @@ function renderScore(){
   $('stDd').textContent='-'+Math.abs(r.dd*100).toFixed(1)+'%';
   $('statRange').textContent=`${d0.getUTCFullYear()}/${d0.getUTCMonth()+1} 至今`;
   /* —— 联动复利计算器：把研判结论映射成建议年化（均值回归：便宜→更高预期，贵→更低预期） —— */
-  const ann5=(Math.pow(SNAP.closes[SNAP.closes.length-1]/SNAP.closes[0],1/5)-1)*100;
+  const _cs=SNAPIDX().closes||[]; const ann5=(Math.pow(_cs[_cs.length-1]/_cs[0],1/5)-1)*100;
   const SPREAD=7;
   let adv=ann5+(0.5-r.pct)*2*SPREAD;
   adv=Math.max(6,Math.min(25,Math.round(adv*2)/2));
@@ -798,44 +874,56 @@ function animateBars(){
    amt 成交金额 | fee 佣金 | prem 买入时溢价率(%) | note 备注
    计算：成本 = amt + fee ；市值 = share × 当前价 ；盈亏 = 市值 - 成本
 ================================================================ */
-const HKEY='ndx100_ledger_v2';
-const PKEY='ndx100_prem_override';   /* 单ETF「当前溢价」手动覆盖值：{code: 数值} */
-const ETFS={'513100':'纳指ETF国泰','513300':'纳斯达克ETF华夏','513390':'纳指100ETF博时','513870':'纳指ETF富国','513110':'纳指ETF华泰柏瑞','159941':'纳指ETF广发','159501':'纳指ETF嘉实','159513':'纳斯达克100ETF大成','159632':'纳斯达克ETF华安','159659':'纳斯达克100ETF招商','159660':'纳指ETF汇添富','159696':'纳指ETF易方达'};
-/* 买入ETF下拉：由 ETFS 动态生成，保证与行情字典一致（官方简称），改 ETFS 即同步下拉 */
-(function(){const sel=document.getElementById('fEtf');if(!sel)return;
-for(const code in ETFS){const o=document.createElement('option');o.value=code;o.textContent=code+' · '+ETFS[code];sel.appendChild(o);}
-})();
+const HKEY='ndx100_ledger_v2';       /* 旧常量保留：纳指账本键，用于迁移 */
+const PKEY='ndx100_prem_override';   /* 旧常量保留：纳指溢价覆盖键 */
+/* 当前指数对应的存储键（每指数一套独立账本） */
+function idxHKey(k){return (IDX_CFG[k||curIdxKey]||IDX_CFG.ndx).hkey}
+function idxPKey(k){return (IDX_CFG[k||curIdxKey]||IDX_CFG.ndx).pkey}
+const ETFS=IDX_CFG.ndx.etfs;         /* 兼容旧引用：默认纳指清单 */
+const etfsOf=()=>IDX_CFG[curIdxKey].etfs;
+/* 买入ETF下拉：由当前指数的 ETF 清单动态生成，切换指数时重建 */
+function rebuildEtfOptions(){
+  const sel=document.getElementById('fEtf');if(!sel)return;
+  sel.innerHTML='';
+  const m=etfsOf();
+  for(const code in m){const o=document.createElement('option');o.value=code;o.textContent=code+' · '+m[code];sel.appendChild(o);}
+}
 /* ETF 实时行情缓存：code -> {p, pc, chp, t} */
 let etfQ={};
-/* 换算系数：场内ETF价格 ÷ 纳指100点位，用于反推净值算溢价率（用最近成交价与指数同步校准） */
+/* 换算系数：场内ETF价格 ÷ 当前指数点位，用于反推净值算溢价率（用最近成交价与指数同步校准） */
 let etfCal={};
 let recs=[];
-let curEtf=null;            /* 当前聚焦的ETF（null=全部视图）
-try{
-  const raw=localStorage.getItem(HKEY);
-  recs=raw?JSON.parse(raw):null;
-}catch(e){recs=null;}
-if(!Array.isArray(recs))recs=null;
+let curEtf=null;            /* 当前聚焦的ETF（null=全部视图） */
 /* 单ETF「当前溢价」手动覆盖值（本地；不随账本云同步，iOS清缓存需重填） */
 let premOverride={};
-try{premOverride=JSON.parse(localStorage.getItem(PKEY)||'{}')||{}}catch(e){premOverride={}}
-function savePremOverride(){try{localStorage.setItem(PKEY,JSON.stringify(premOverride))}catch(e){}}
-/* 兼容旧版 v1 数据（只有 amt 的老记录）：迁移成新结构，价格用当日指数换算 */
-if(!recs){
-  let old=null;try{old=JSON.parse(localStorage.getItem('ndx100_ledger_v1')||'null')}catch(e){}
-  if(Array.isArray(old)&&old.length){
-    recs=old.map(r=>({d:r.d,code:r.code,name:r.name||ETFS[r.code]||'自定义ETF',
-      price:+(r.amt/1000).toFixed(3)||1,share:1000,amt:r.amt,fee:0,prem:null,note:r.note||''}));
+function loadIdxLedger(){
+  /* 读当前指数的账本；无则尝试从 v1 旧格式/纳指老键迁移 */
+  const key=idxHKey();
+  let data=null;
+  try{ const raw=localStorage.getItem(key); data=raw?JSON.parse(raw):null; }catch(e){ data=null; }
+  if(!Array.isArray(data))data=null;
+  if(!data && key===IDX_CFG.ndx.hkey){
+    /* 旧版 v1（只有 amt）迁移成新结构 */
+    let old=null;try{old=JSON.parse(localStorage.getItem('ndx100_ledger_v1')||'null')}catch(e){}
+    if(Array.isArray(old)&&old.length){
+      data=old.map(r=>({d:r.d,code:r.code,name:r.name||ETFS[r.code]||'自定义ETF',
+        price:+(r.amt/1000).toFixed(3)||1,share:1000,amt:r.amt,fee:0,prem:null,note:r.note||''}));
+    }
   }
+  if(!data && key===IDX_CFG.ndx.hkey){ /* 纳指首次使用：预置示例，可删 */
+    data=[
+      {d:'2026-06-15',code:'513100',name:'纳指ETF国泰',price:2.108,share:470,amt:990.76,fee:0,prem:1.42,note:'示例·发薪日'},
+      {d:'2026-07-15',code:'513100',name:'纳指ETF国泰',price:2.185,share:450,amt:983.25,fee:0,prem:2.05,note:'示例'},
+      {d:'2026-08-17',code:'513100',name:'纳指ETF国泰',price:2.221,share:440,amt:977.24,fee:0,prem:1.16,note:'示例'},
+    ];
+  }
+  recs=data||[];
+  /* 溢价覆盖值也按指数隔离 */
+  try{premOverride=JSON.parse(localStorage.getItem(idxPKey())||'{}')||{}}catch(e){premOverride={}}
+  etfQ={}; etfCal={}; curEtf=null;
 }
-if(!Array.isArray(recs)){ /* 首次使用：预置示例，可删 */
-  recs=[
-    {d:'2026-06-15',code:'513100',name:'纳指ETF国泰',price:2.108,share:470,amt:990.76,fee:0,prem:1.42,note:'示例·发薪日'},
-    {d:'2026-07-15',code:'513100',name:'纳指ETF国泰',price:2.185,share:450,amt:983.25,fee:0,prem:2.05,note:'示例'},
-    {d:'2026-08-17',code:'513100',name:'纳指ETF国泰',price:2.221,share:440,amt:977.24,fee:0,prem:1.16,note:'示例'},
-  ];
-}
-function saveRecs(){try{localStorage.setItem(HKEY,JSON.stringify(recs));}catch(e){console.warn('[ndx] 本地保存失败',e);toast('⚠ 账本没存进浏览器本地（隐私模式/存储已满/被禁用），重启会丢');return false}cloudSave();return true}
+function savePremOverride(){try{localStorage.setItem(idxPKey(),JSON.stringify(premOverride))}catch(e){}}
+function saveRecs(){try{localStorage.setItem(idxHKey(),JSON.stringify(recs));}catch(e){console.warn('[ndx] 本地保存失败',e);toast('⚠ 账本没存进浏览器本地（隐私模式/存储已满/被禁用），重启会丢');return false}cloudSave();return true}
 /* ================= 云同步（GitHub Gist 自动备份） ================= */
 const CTOK='ndx100_cloud_token',CGID='ndx100_cloud_gist',CTS='ndx100_cloud_ts',CFILE='ndx-ledger.json';
 function cloudToken(){try{return localStorage.getItem(CTOK)||''}catch(e){return ''}}
@@ -849,7 +937,18 @@ function gistReq(method,path,body){
     body:body?JSON.stringify(body):undefined
   });
 }
-function cloudPayload(){return {app:'ndx100-dca',ver:2,exportedAt:new Date().toISOString(),recs:recs};}
+/* 备份载荷：同时携带两套账本（books），并保留 recs 字段指向当前指数，兼容旧版读取。
+   这样切换指数不会互相覆盖云端数据。 */
+function cloudPayload(){
+  const books={};
+  IDX_KEYS.forEach(k=>{
+    let v=[];
+    if(k===curIdxKey)v=recs;
+    else{try{v=JSON.parse(localStorage.getItem(idxHKey(k))||'[]')||[]}catch(e){v=[]}}
+    books[k]=Array.isArray(v)?v:[];
+  });
+  return {app:'ndx100-dca',ver:2,exportedAt:new Date().toISOString(),curIndex:curIdxKey,books:books,recs:recs};
+}
 async function ensureGist(){
   let gid=cloudGid();
   if(gid)return gid;
@@ -883,7 +982,23 @@ async function cloudLoad(){
     const j=await r.json();const f=j.files&&j.files[CFILE];if(!f||!f.content)return;
     const data=JSON.parse(f.content);
     if(data&&Array.isArray(data.recs)){
-      if(recs.length===0&&data.recs.length){recs=data.recs;saveRecs();renderLedger();toast('已从云端恢复 '+recs.length+' 笔');}
+      /* 新格式带 books：恢复两套账本；旧格式只有 recs：只恢复当前指数 */
+      if(data.books&&typeof data.books==='object'){
+        let restored=0;
+        IDX_KEYS.forEach(k=>{
+          const arr=data.books[k];
+          if(!Array.isArray(arr)||!arr.length)return;
+          if(k===curIdxKey){
+            if(recs.length===0){recs=arr;restored+=arr.length;}
+          }else{
+            let local=[];try{local=JSON.parse(localStorage.getItem(idxHKey(k))||'[]')||[]}catch(e){}
+            if(!local.length){try{localStorage.setItem(idxHKey(k),JSON.stringify(arr))}catch(e){}}
+          }
+        });
+        if(restored){saveRecs();renderLedger();toast('已从云端恢复 '+restored+' 笔');}
+      }else if(recs.length===0&&data.recs.length){
+        recs=data.recs;saveRecs();renderLedger();toast('已从云端恢复 '+recs.length+' 笔');
+      }
       cloudStatText('云端可用 · '+new Date(data.exportedAt).toLocaleString('zh-CN'));
     }
   }catch(e){console.warn('[cloud] 拉取失败',e);}
@@ -1319,7 +1434,7 @@ function openModal(r){
   document.querySelectorAll('#fDir button').forEach(b=>b.classList.toggle('on',b.dataset.t===type));
   $('mTitle').textContent=(editIdx>=0?'编辑':'记一笔')+(type==='S'?'卖出':'买入');
   $('fDate').value=r?r.d:todayStr();$('fDate').max=todayStr();
-  const known=r&&ETFS[r.code]?r.code:'';
+  const known=r&&etfsOf()[r.code]?r.code:'';
   $('fEtf').value = r ? (known||'159941') : (curEtf || known || '159941');
   $('fPrice').value=r?r.price:'';
   $('fShare').value=r?r.share:'';
@@ -1434,7 +1549,7 @@ function saveModal(){
     }
     amt=+(px*sh);  /* 卖出金额 = 卖出价 × 份额（到手再减佣金） */
   }
-  const name=code?ETFS[code]:'自定义ETF';
+  const name=code?(etfsOf()[code]||ETFS[code]):'自定义ETF';
   const r={d,code,name,type,price:+px.toFixed(3),share:Math.round(sh),amt:+amt.toFixed(2),fee:+fee.toFixed(2),
     prem:prem===null?null:+prem.toFixed(2),note};
   if(editIdx>=0)recs[editIdx]=r;else recs.push(r);
@@ -1612,7 +1727,7 @@ function renderCalc(){
       <div class="sub"><i>本金 <b style="color:var(--txt2)">¥${fmt0(cost)}</b></i><i>收益 <b>¥${fmt0(profit)}</b></i>${mult?`<i>本金翻 <b>${mult.toFixed(1)}</b> 倍</i>`:''}</div>
       <div class="cvbar"><i style="width:${pc}%;background:rgba(79,124,255,.65)"></i><i style="width:${100-pc}%;background:linear-gradient(90deg,#22c55e,#84cc16)"></i></div>
     </div>`}).join('');
-  const ann5real=((Math.pow(SNAP.closes[SNAP.closes.length-1]/SNAP.closes[0],1/5)-1)*100).toFixed(1);
+  const _cr=SNAPIDX().closes||[]; const ann5real=((Math.pow(_cr[_cr.length-1]/_cr[0],1/5)-1)*100).toFixed(1);
   const judgeLine=JUDGE.adv>0?`当前按研判建议年化 <b>${JUDGE.adv.toFixed(1)}%</b>（评分${JUDGE.total} · 5年分位${Math.round(JUDGE.pct*100)}%）计算，可拖动上/下调。`:'';
   $('cNote').innerHTML=`每月投 <b>¥${fmt0(A)}</b>${P0?`、已有本金 ¥${fmt0(P0)}`:''}，按年化 <b>${r}%</b> 复利滚动：10年约 <b>¥${fmt0(fv(P0,A,r,10))}</b>，15年约 <b>¥${fmt0(fv(P0,A,r,15))}</b>，20年约 <b>¥${fmt0(fv(P0,A,r,20))}</b>。本金是蓝色的部分，绿色是复利帮你赚的。<span class="dot5"></span>纳指100过去5年实际年化约 <b>${ann5real}%</b>，但未来未必，收益率越高波动越大，谨慎乐观。<span class="dot5"></span>${judgeLine}`;
 }
@@ -1656,7 +1771,7 @@ function applyEtfQ(code,f){
   const chp=+f[32];
   const nav=+f[81];  /* 单位净值：腾讯行情第81字段，已与东方财富基金净值(159941=1.4850)交叉核对一致 */
   etfQ[code]={p,pc:+f[4],o:+f[5],chp:isFinite(chp)?chp:0,
-    ch:+f[31],h:+f[33],l:+f[34],name:ETFS[code]||f[1]||code,t:f[30],
+    ch:+f[31],h:+f[33],l:+f[34],name:etfsOf()[code]||f[1]||code,t:f[30],
     nav:(nav>0&&nav<p*2)?nav:0};
   return true;
 }
@@ -1683,7 +1798,7 @@ function loadTencent(cb){
        用最原始的 for 循环和 typeof 手工收集代码，不依赖任何数组高阶方法。 */
     const codeSet={};
     function addCode(c){ if(c&&typeof c==='string'&&symOf(c))codeSet[c]=1; }
-    const defaults=['513100','513300','513390','513870','513110','159941','159501','159513','159632','159659','159660','159696'];
+    const defaults=[]; for(const c in etfsOf())defaults.push(c);
     for(let i=0;i<defaults.length;i++)addCode(defaults[i]);
     if(recs&&typeof recs==='object'&&typeof recs.length==='number'){
       for(let i=0;i<recs.length;i++){
@@ -1691,7 +1806,10 @@ function loadTencent(cb){
       }
     }
     const codes=[]; for(const c in codeSet)codes.push(c);
-    const list=['usNDX']; for(let i=0;i<codes.length;i++)list.push(symOf(codes[i]));
+    /* 当前指数的行情符号（纳指 usNDX / 标普 us.INX） */
+    const qsym=IX().tencentSym;
+    const qtag='v_'+qsym;
+    const list=[qsym]; for(let i=0;i<codes.length;i++)list.push(symOf(codes[i]));
     const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
     const xhr=new XMLHttpRequest();
     xhr.open('GET',src,true);
@@ -1709,7 +1827,7 @@ function loadTencent(cb){
           let val=line.slice(i+1).trim();
           if(val.length>1&&val[0]==='"'&&val[val.length-1]==='"')val=val.slice(1,-1);
           const f=val.split('~');
-          if(name==='v_usNDX'){ try{qok=applyQuote(f);}catch(e){} }
+          if(name===qtag){ try{qok=applyQuote(f);}catch(e){} }
           else if(name.indexOf('v_')===0){
             const code=name.slice(2).replace(/^sz|^sh/,'');
             try{applyEtfQ(code,f);}catch(e){}
@@ -1743,8 +1861,81 @@ function refreshAll(manual){
   setTimeout(()=>{if(manual)ico.classList.remove('spin');},9500); /* 双保险：即使 done 漏调用，9.5s 也强制停转 */
   loadJin10();loadSina();
 }
-/* ================= Tab 切换 ================= */
-const TABS={home:['纳指100指数定投','NASDAQ 100 · 实时行情'],news:['财经资讯','新浪财经 · 金十数据'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本']};
+/* 双指数概览卡：两行，各自算一次评分，点一行切换指数 */
+function renderOverview(){
+  const box=$('ovList');if(!box)return;
+  let html='';
+  IDX_KEYS.forEach(k=>{
+    const cfg=IDX_CFG[k], s=(SNAP.idx||{})[k]||{};
+    const cs=s.closes||[], ds=s.days||[];
+    if(!cs.length)return;
+    let r,g;
+    try{ r=computeAll(cs,ds,cfg.ddScale||cfg.ddScale); g=grade(r.total); }
+    catch(e){ return; }
+    const q=s.quote||{};
+    const chp=(q.chp==null||isNaN(q.chp))?null:Number(q.chp);
+    const chgCol=chp==null?'var(--txt3)':(chp>=0?'var(--up)':'var(--down)');
+    const on=k===curIdxKey?' on':'';
+    html+=`<div class="ovRow${on}" data-i="${k}">
+      <span class="ovBar" style="background:${cfg.color}"></span>
+      <div class="ovMid">
+        <div class="ovName">${cfg.short}<em>${cfg.code}</em></div>
+        <div class="ovSub">本月第 <b>${r.rank}</b> 便宜 / ${r.mDays} 个交易日 · 5年分位 ${Math.round(r.pct*100)}%</div>
+      </div>
+      <div class="ovRight">
+        <div class="ovScore" style="color:${g.c}">${Math.round(r.total)}<i>分</i></div>
+        <div class="ovGrade" style="color:${g.c}">${g.label}</div>
+        <div class="ovChg" style="color:${chgCol}">${chp==null?'—':(chp>=0?'+':'')+chp.toFixed(2)+'%'}</div>
+      </div>
+    </div>`;
+  });
+  box.innerHTML=html;
+  box.querySelectorAll('.ovRow').forEach(el=>{
+    el.onclick=()=>switchIndex(el.dataset.i);
+  });
+}
+
+/* ================= 指数切换 ================= */
+function renderIdxSwitch(){
+  const box=$('idxSwitch');if(!box)return;
+  box.querySelectorAll('button').forEach(b=>{
+    b.classList.toggle('on',b.dataset.i===curIdxKey);
+  });
+  /* 两个指数的实时涨跌小标 */
+  IDX_KEYS.forEach(k=>{
+    const el=$('idxPct'+k.charAt(0).toUpperCase()+k.slice(1));if(!el)return;
+    const s=(SNAP.idx||{})[k]||{};
+    const chp=(s.quote||{}).chp;
+    if(chp==null||isNaN(chp)){el.textContent='';return;}
+    el.textContent=(chp>=0?'+':'')+Number(chp).toFixed(2)+'%';
+    el.style.color=chp>=0?'var(--up)':'var(--down)';
+  });
+}
+function switchIndex(k){
+  if(!IDX_CFG[k]||k===curIdxKey)return;
+  curIdxKey=k;
+  try{localStorage.setItem('ndx100_cur_index',k)}catch(e){}
+  /* 重载该指数的数据、账本、ETF清单与溢价覆盖 */
+  loadIdxState();
+  loadIdxLedger();
+  rebuildEtfOptions();
+  calY=null;calM=null;       /* 日历回到当前月 */
+  curHi=12;                  /* 走势图区间重置 */
+  renderIdxSwitch();renderOverview();
+  renderQuote();renderScore();renderLedger();renderCal();renderCalc();
+  if(curTab==='home')requestAnimationFrame(drawChart);
+  if(curTab==='judge')requestAnimationFrame(animateBars);
+  /* 文案同步 */
+  const[T,S]=TABS[curTab];
+  const ht=$('hdTitle');if(ht)ht.textContent=(curTab==='home'?IX().short+'指数定投':T);
+  const hs=$('hdSub');if(hs)hs.textContent=(curTab==='home'?IX().name+' · 实时行情':S);
+  document.title=(curTab==='home'?IX().short+'定投工作台':T+' · '+IX().short+'定投工作台');
+  toast('已切换到 '+IX().name+(recs.length?'（账本 '+recs.length+' 笔）':'（尚无记录）'));
+  /* 切过去后拉一次该指数的实时行情 */
+  setTimeout(()=>{try{refreshAll(false)}catch(e){}},80);
+}
+
+const TABS={home:['指数定投','实时行情'],news:['财经资讯','新浪财经 · 金十数据'],judge:['价值研判','AI评分 · 近5年真实行情'],plan:['成长计划','场内ETF账本']};
 const scrollMemo={home:0,news:0,judge:0,plan:0};
 let curTab='home';
 function switchTab(p){
@@ -1754,8 +1945,8 @@ function switchTab(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.toggle('active',el.id==='page-'+p));
   document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
   const[T,S]=TABS[p];
-  const ht=$('hdTitle');if(ht)ht.textContent=T;const hs=$('hdSub');if(hs)hs.textContent=S;
-  document.title=T+' · 纳指100定投工作台';
+  const ht=$('hdTitle');if(ht)ht.textContent=(p==='home'?IX().short+'指数定投':T);const hs=$('hdSub');if(hs)hs.textContent=(p==='home'?IX().name+' · 实时行情':S);
+  document.title=(p==='home'?IX().short+'定投工作台':T+' · '+IX().short+'定投工作台');
   window.scrollTo(0,scrollMemo[p]||0);
   if(p==='home'){requestAnimationFrame(drawChart);renderCal();}
   if(p==='judge')requestAnimationFrame(animateBars);
@@ -1822,6 +2013,11 @@ function renderCal(){
 }
 /* ================= 启动 ================= */
 function boot(){
+  /* 先按当前指数装载账本与 ETF 下拉，再渲染 */
+  loadIdxLedger();
+  rebuildEtfOptions();
+  renderIdxSwitch();renderOverview();
+  $('idxSwitch').addEventListener('click',e=>{const b=e.target.closest('button');if(b)switchIndex(b.dataset.i)});
   renderQuote();renderScore();renderLedger();renderNews();renderCalc();renderCal();updNewsTs();drawChart();
   $('calPrev').onclick=()=>{ if(calM<=1){calM=12;calY--}else calM--; renderCal(); };
   $('calNext').onclick=()=>{ if(calM>=12){calM=1;calY++}else calM++; renderCal(); };
@@ -1848,7 +2044,7 @@ function boot(){
 boot();
 window.__selfTest=function(){
   const r=computeAll(closes,days);
-  const b=SNAP.ind;
+  const b=SNAPIDX().ind;
   return{js:{pct:+(r.pct*100).toFixed(1),s1:r.s1,s2:r.s2,s3:r.s3,s4:r.s4,s5:r.s5,total:r.total},
           py:{pct:b.pct5y,s1:b.s1,s2:b.s2,s3:b.s3,s4:b.s4,s5:b.s5,total:b.total},
           quote:{p:quote.p,timeET:quote.timeET}};
@@ -1865,7 +2061,7 @@ try{
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
     /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=29').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=34').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
