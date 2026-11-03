@@ -1984,8 +1984,12 @@ function isTradeDay(y,mo,d){
 function renderCal(){
   const g=$('calGrid'); if(!g)return;
   if(calY==null){
+    /* 默认显示当前月份；若快照数据比当前月还新（罕见），跟随快照 */
+    const now0=new Date();
+    calY=now0.getFullYear(); calM=now0.getMonth()+1;
     const dt=dOf(days[days.length-1]);
-    calY=dt.getUTCFullYear(); calM=dt.getUTCMonth()+1;
+    const sy=dt.getUTCFullYear(), sm=dt.getUTCMonth()+1;
+    if(calY*12+calM < sy*12+sm){ calY=sy; calM=sm; }
   }
   const closeMap={}, prevClose={};
   for(let i=0;i<days.length;i++)closeMap[days[i]]=closes[i];
