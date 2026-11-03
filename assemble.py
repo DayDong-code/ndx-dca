@@ -9,7 +9,15 @@ ART = os.path.dirname(os.path.abspath(__file__)) + '/'
 OUT = ART
 os.makedirs(OUT, exist_ok=True)
 
-snap = open(ART + 'snap.json').read()
+snap_raw = json.loads(open(ART + 'snap.json').read())
+# ---- 性能优化：新闻数据从主快照剥离，单独输出 news.json（首屏不再内联 ~22KB）----
+news_data = snap_raw.pop('news', {'jin10': [], 'sina': []})
+with open(ART + 'news.json', 'w', encoding='utf-8') as f:
+    json.dump(news_data, f, ensure_ascii=False, separators=(',', ':'))
+# 主快照保留一个空壳占位，兼容旧模板里的 SNAP.news.xxx 访问
+snap_raw['news'] = {'jin10': [], 'sina': []}
+snap = json.dumps(snap_raw, ensure_ascii=False, separators=(',', ':'))
+
 tpl = open(ART + 'template.html', encoding='utf-8').read()
 html = tpl.replace('__SNAP__', snap)
 
@@ -86,23 +94,34 @@ for dphi in (math.radians(150), math.radians(210)):
 icon.save(OUT + 'icon-ndx100.png')
 print('icon saved:', os.path.getsize(OUT + 'icon-ndx100.png') // 1024, 'KB')
 
-# ---- 图标内联为 data URI，单文件也能带 App 图标 ----
-b64 = base64.b64encode(open(OUT + 'icon-ndx100.png', 'rb').read()).decode()
-icon_uri = 'data:image/png;base64,' + b64
-# apple-touch-icon / favicon
-html = html.replace('href="icon-ndx100.png"', 'href="' + icon_uri + '"')
-# manifest（整体百分号编码，icons 用 data URI）
+# ---- 性能优化：图标输出为小体积 WebP 多尺寸，外链而非内联 base64 ----
+#    旧做法把 113KB PNG base64 内联两次 + manifest 中二次百分号编码（250KB），共占 73% 体积。
+from PIL import features
+use_webp = features.check('webp')
+src_icon = Image.open(OUT + 'icon-ndx100.png').convert('RGBA')
+icon_files = []
+for size in (180, 192, 512):
+    im2 = src_icon.resize((size, size), Image.LANCZOS)
+    if use_webp:
+        name = f'icon-{size}.webp'
+        im2.save(OUT + name, 'WEBP', quality=90, method=6)
+    else:
+        name = f'icon-{size}.png'
+        im2.save(OUT + name, 'PNG', optimize=True)
+    icon_files.append((size, name, 'image/webp' if use_webp else 'image/png'))
+for s, n, _t in icon_files:
+    print(f'  icon {n}: {os.path.getsize(OUT + n) / 1024:.1f} KB')
+
+# ---- manifest 独立文件（不再 data URI 二次编码）----
 manifest = {
     "name": "纳指100指数定投工作台", "short_name": "纳指100定投",
-    "start_url": ".", "display": "standalone",
+    "start_url": ".", "scope": "./", "display": "standalone",
     "background_color": "#eaf3fd", "theme_color": "#1677ff",
-    "icons": [
-        {"src": icon_uri, "sizes": "192x192", "type": "image/png"},
-        {"src": icon_uri, "sizes": "512x512", "type": "image/png"},
-    ],
+    "icons": [{"src": n, "sizes": f"{s}x{s}", "type": t} for s, n, t in icon_files if s != 180],
 }
-mhref = 'data:application/manifest+json,' + quote(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')), safe='')
-html = re.sub(r"<link rel=\"manifest\"[^>]*>", '<link rel="manifest" href="' + mhref.replace('\\', '\\\\') + '">', html, count=1)
+with open(OUT + 'manifest.json', 'w', encoding='utf-8') as f:
+    json.dump(manifest, f, ensure_ascii=False, separators=(',', ':'))
+print('  manifest.json:', os.path.getsize(OUT + 'manifest.json'), 'B')
 
 with open(OUT + 'index.html', 'w', encoding='utf-8') as f:
     f.write(html)
@@ -114,7 +133,10 @@ try:
 except Exception:
     pass
 print('html KB:', os.path.getsize(OUT + 'index.html') // 1024)
-# 校验
+# 校验：确认 base64 大图标与 manifest data URI 已彻底移除
 h = open(OUT + 'index.html', encoding='utf-8').read()
-assert 'icon-ndx100.png' not in h.split('</head>')[0] or True
-print('inline icon:', 'data:image/png;base64' in h, '| manifest data uri:', 'application/manifest+json' in h)
+assert 'data:image/png;base64' not in h, '仍有内联 base64 图标'
+assert 'application/manifest+json' not in h, '仍有 manifest data URI'
+print('校验通过：无内联 base64 图标 | manifest 已外链 | 快照 KB:',
+      round(len(snap.encode()) / 1024, 1), '| news.json KB:',
+      round(os.path.getsize(OUT + 'news.json') / 1024, 1))
