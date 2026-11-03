@@ -1869,7 +1869,8 @@ function refreshAll(manual){
   try{loadTencent(done);}catch(e){done(false,'逻辑异常:'+(e&&e.message||e));} /* loadTencent 同步抛错也能收尾并带上原因 */
   setTimeout(()=>done(false,'兜底超时(9秒)'),9000);             /* 硬兜底：无论如何 9 秒内必停转，防 iOS 上卡死 */
   setTimeout(()=>{if(manual)ico.classList.remove('spin');},9500); /* 双保险：即使 done 漏调用，9.5s 也强制停转 */
-  loadJin10();loadSina();
+  /* 性能优化：新闻仅在「资讯」页才拉取，首屏不再预取 ~90KB 的新浪/金十数据 */
+  if(curTab==='news'){loadJin10();loadSina();}
 }
 /* 双指数概览卡：两行，各自算一次评分，点一行切换指数 */
 function renderOverview(){
@@ -1960,7 +1961,10 @@ function switchTab(p){
   window.scrollTo(0,scrollMemo[p]||0);
   if(p==='home'){requestAnimationFrame(drawChart);renderCal();}
   if(p==='judge')requestAnimationFrame(animateBars);
-  if(p==='news')loadNewsSeed();   /* 资讯页首次进入才加载新闻，不拖累首屏 */
+  if(p==='news'){
+    loadNewsSeed();                  /* 内置新闻快照（news.json，很小） */
+    loadJin10();loadSina();          /* 再拉实时新闻 */
+  }   /* 资讯页首次进入才加载新闻，不拖累首屏 */
 }
 $('tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(b)switchTab(b.dataset.p)});
 $('btnToJudge').addEventListener('click',()=>switchTab('judge'));
@@ -2043,7 +2047,7 @@ function boot(){
   if(cloudToken()){cloudStatText('连接中…');cloudLoad();}
   setTimeout(()=>refreshAll(false),600);
   setInterval(()=>{if(!document.hidden)refreshAll(false)},60e3);
-  setInterval(()=>{if(!document.hidden){loadJin10();loadSina()}},300e3);
+  setInterval(()=>{if(!document.hidden&&curTab==='news'){loadJin10();loadSina()}},300e3);
   /* 单ETF「当前溢价」手动调节：写覆盖值并重算溢价率影响 */
   document.addEventListener('change',function(e){
     if(e.target&&e.target.id==='pmPremNow'){
@@ -2078,7 +2082,7 @@ try{
 /* 注册 Service Worker：stale-while-revalidate 秒开，后台静默检查版本 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js?v=40').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=41').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
