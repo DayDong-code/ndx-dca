@@ -133,6 +133,21 @@ upsert("index.html", html, "deploy: 纳指100定投工作台 PWA (带 sha 更新
 print("上传 .nojekyll ...")
 upsert(".nojekyll", b"", "add .nojekyll")
 
+# 2.2 图标（WebP 多尺寸）+ 独立 manifest + 懒加载新闻数据
+#     性能优化后不再内联 base64，这些是首屏以外的小文件，由 SW cache-first 缓存
+for f, mime_msg in [
+    ("icon-180.webp", "deploy: 图标 180px (Apple Touch Icon)"),
+    ("icon-192.webp", "deploy: 图标 192px"),
+    ("icon-512.webp", "deploy: 图标 512px"),
+    ("manifest.json", "deploy: 独立 manifest（不再 data URI 二次编码）"),
+    ("news.json", "deploy: 新闻数据外置（首屏懒加载）"),
+]:
+    p = ART + f
+    if os.path.exists(p):
+        data = open(p, "rb").read()
+        print("上传 %s (%d bytes) ..." % (f, len(data)))
+        upsert(f, data, mime_msg)
+
 # 2.5 上传 Service Worker（让 PWA 自动更新，无需删了重装图标）
 sw = open(ART + "sw.js", "rb").read()
 print("上传 sw.js (%d bytes) ..." % len(sw))
