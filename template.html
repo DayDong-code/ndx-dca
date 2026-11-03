@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<!-- 性能优化：去掉 HTML 层的 no-cache/Pragma/Expires 三重 meta。
+     浏览器对 <meta http-equiv> 的缓存指令支持本就不一致，且会与 Service Worker
+     的 stale-while-revalidate 策略打架，导致每次进入都强制走网络。
+     现在统一由 sw.js 控制缓存，HTML 只保留资源本身的 max-age。 -->
 <meta name="theme-color" content="#1677ff">
 <meta name="x-app-ver" content="2026.11.03">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="纳指100定投">
-<link rel="manifest" href='data:application/manifest+json,{"name":"纳指100指数定投工作台","short_name":"纳指100定投","start_url":".","display":"standalone","background_color":"%230a0e17","theme_color":"%230a0e17","icons":[{"src":"icon-ndx100.png","sizes":"192x192","type":"image/png"},{"src":"icon-ndx100.png","sizes":"512x512","type":"image/png"}]}'>
-<link rel="apple-touch-icon" href="icon-ndx100.png">
-<link rel="icon" href="icon-ndx100.png">
+<!-- 图标改为外链小体积 WebP（13KB），不再内联 base64；manifest 独立成文件 -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.webp">
+<link rel="icon" type="image/webp" href="icon-192.webp">
 <title>纳指100指数定投工作台</title>
 <style>
 :root{
@@ -663,26 +665,6 @@ function usHolidays(y){
   add(9,nthWeekday(y,9,1,1));      // 劳动节
   add(11,nthWeekday(y,11,4,4));    // 感恩节
   return s;
-}
-/* 到 y年mo月d日(含)本月已过去的交易日数（周一~周五 减休市日） */
-function tradingDaysTo(y,mo,d){
-  const hs=usHolidays(y);let n=0;
-  for(let day=1;day<=d;day++){
-    const wd=new Date(Date.UTC(y,mo-1,day)).getUTCDay();
-    if(wd===0||wd===6)continue;
-    if(hs.has(y+'-'+mo+'-'+day))continue;
-    n++;
-  }
-  return n;
-}
-/* 当前美东日期（优先用实时行情的 timeET，否则用快照最后一天） */
-function curETDate(){
-  if(liveOK&&quote.timeET){
-    const[n]=quote.timeET.split(' ');const[y,mo,d]=n.split('-').map(Number);
-    if(y>2000)return{y,mo,d};
-  }
-  const dt=dOf(days[days.length-1]);
-  return{y:dt.getUTCFullYear(),mo:dt.getUTCMonth()+1,d:dt.getUTCDate()};
 }
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600)}
 function etDst(y,m,d){
@@ -1661,8 +1643,26 @@ cv.addEventListener('touchend',()=>{curHi=-1;drawChart();tip.style.display='none
 cv.addEventListener('mousemove',e=>tipAt(e.clientX));
 cv.addEventListener('mouseleave',()=>{curHi=-1;drawChart();tip.style.display='none'});
 /* ================= 资讯 ================= */
+/* 性能优化：新闻数据不再内联进 HTML（首屏用不到，白占 ~22KB）。
+   初始为空，切到「资讯」页时按需从 news.json 拉取；失败则静默空列表。 */
 let newsSrc='sina';
-let newsData={jin10:SNAP.news.jin10||[],sina:SNAP.news.sina||[]};
+let newsData={jin10:[],sina:[]};
+let newsLoaded=false, newsLoading=false;
+async function loadNewsSeed(){
+  if(newsLoaded||newsLoading)return;
+  newsLoading=true;
+  try{
+    const r=await fetch('news.json?v='+(SNAP.builtAt||''),{cache:'force-cache'});
+    if(r.ok){
+      const j=await r.json();
+      if(!newsData.jin10.length)newsData.jin10=j.jin10||[];
+      if(!newsData.sina.length)newsData.sina=j.sina||[];
+      newsLoaded=true;
+      renderNews();updNewsTs();
+    }
+  }catch(_){}
+  newsLoading=false;
+}
 document.getElementById('newsTabs').addEventListener('click',e=>{
   const s=e.target.closest('span');if(!s)return;
   document.querySelectorAll('#newsTabs span').forEach(x=>x.classList.remove('on'));s.classList.add('on');
@@ -1960,6 +1960,7 @@ function switchTab(p){
   window.scrollTo(0,scrollMemo[p]||0);
   if(p==='home'){requestAnimationFrame(drawChart);renderCal();}
   if(p==='judge')requestAnimationFrame(animateBars);
+  if(p==='news')loadNewsSeed();   /* 资讯页首次进入才加载新闻，不拖累首屏 */
 }
 $('tabbar').addEventListener('click',e=>{const b=e.target.closest('button');if(b)switchTab(b.dataset.p)});
 $('btnToJudge').addEventListener('click',()=>switchTab('judge'));
@@ -2032,7 +2033,10 @@ function boot(){
   rebuildEtfOptions();
   renderIdxSwitch();renderOverview();
   $('idxSwitch').addEventListener('click',e=>{const b=e.target.closest('button');if(b)switchIndex(b.dataset.i)});
-  renderQuote();renderScore();renderLedger();renderNews();renderCalc();renderCal();updNewsTs();drawChart();
+  renderQuote();renderScore();renderLedger();renderCalc();renderCal();drawChart();
+  /* 资讯页懒加载：若首屏即停在资讯页才立即拉取，否则等切页时再加载 */
+  if(curTab==='news'){loadNewsSeed();}else{renderNews();}
+  updNewsTs();
   $('calPrev').onclick=()=>{ if(calM<=1){calM=12;calY--}else calM--; renderCal(); };
   $('calNext').onclick=()=>{ if(calM>=12){calM=1;calY++}else calM++; renderCal(); };
   $('ftSnap').textContent='内置数据快照 '+SNAP.builtAt+'（北京时间）';
@@ -2071,15 +2075,23 @@ try{
   if(vm)$('verLabel').textContent='v'+vm.getAttribute('content');
 }catch(e){}
 
-/* 注册 Service Worker：让添加到主屏幕的 PWA 每次都拿最新页面（无需删了重装） */
+/* 注册 Service Worker：stale-while-revalidate 秒开，后台静默检查版本 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    /* v5：改 URL 带版本戳，绕过旧 SW/浏览器对 sw.js 的缓存，确保能拉新脚本 */
-    navigator.serviceWorker.register('./sw.js?v=39').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=40').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
-    navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.type==='RELOAD')doReload(); });
+    navigator.serviceWorker.addEventListener('message',e=>{
+      if(!e.data)return;
+      if(e.data.type==='RELOAD')doReload();
+      /* 后台发现新版本：静默重载，用户无感拿到最新数据（仅当页面空闲且未在输入） */
+      if(e.data.type==='NEW_VERSION'){
+        const busy=document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName);
+        const modal=document.querySelector('.mask.show');
+        if(!busy&&!modal)setTimeout(doReload,600);
+      }
+    });
   });
 }
 </script>
