@@ -28,3 +28,34 @@ jobs:
           python build_snapshot.py
           python assemble.py
           python gh_deploy2.py
+
+      - name: 校验线上版本（失败则重试 Pages 构建）
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          EXPECT=$(date -u +%Y.%m.%d)
+          for i in 1 2 3 4 5 6; do
+            sleep 30
+            LIVE=$(curl -s "https://daydong-code.github.io/ndx-dca/index.html" | grep -o 'x-app-ver" content="[0-9.]*"' | grep -o '[0-9][0-9.]*' || true)
+            echo "第${i}次校验: 线上=$LIVE 期望=$EXPECT"
+            if [ "$LIVE" = "$EXPECT" ]; then
+              echo "线上已是最新，校验通过"
+              exit 0
+            fi
+          done
+          echo "线上版本未更新，尝试重新请求 Pages 构建..."
+          for i in 1 2 3; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
+              -H "Authorization: token $GH_PAT" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages/builds")
+            echo "重试$i: Pages build 请求返回 $CODE"
+            sleep 60
+            LIVE=$(curl -s "https://daydong-code.github.io/ndx-dca/index.html" | grep -o 'x-app-ver" content="[0-9.]*"' | grep -o '[0-9][0-9.]*' || true)
+            if [ "$LIVE" = "$EXPECT" ]; then
+              echo "补救成功，线上已更新"
+              exit 0
+            fi
+          done
+          echo "::warning::线上版本仍未更新，请手动检查 Pages 部署"
+          exit 1
