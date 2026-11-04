@@ -63,6 +63,7 @@ a{color:var(--brand);text-decoration:none}
 .ovMid{flex:1;min-width:0}
 .ovName{font-size:14.5px;font-weight:800;color:var(--txt);display:flex;align-items:baseline;gap:6px;line-height:1.3}
 .ovName em{font-style:normal;font-size:11.5px;font-weight:600;color:var(--txt3)}
+.ovName em.ovLive{font-size:9.5px;font-weight:800;color:#fff;background:var(--brand);padding:1px 5px;border-radius:6px;letter-spacing:.5px;opacity:.85}
 .ovSub{font-size:11.5px;color:var(--txt2);margin-top:3px;line-height:1.35}
 .ovRight{text-align:right;flex-shrink:0}
 .ovScore{font-size:21px;font-weight:800;line-height:1.05}
@@ -675,7 +676,12 @@ function etDst(y,m,d){
   return d < (first===0?1:8-first);
 }
 function etToBJ(et){
-  const[n,t]=et.split(' ');let[y,mo,d]=n.split('-').map(Number);let[h,mi]=t.split(':').map(Number);
+  /* 防御：行情源偶发缺少 timeET 时直接返回占位，避免抛错中断整条渲染链 */
+  if(!et||typeof et!=='string'||et.indexOf(' ')<0)return '北京时间 —';
+  const p=et.split(' '); if(p.length<2)return '北京时间 —';
+  const[n,t]=p;const nd=n.split('-').map(Number);const td=t.split(':').map(Number);
+  if(nd.length<3||td.length<2||!nd.every(x=>!isNaN(x))||!td.every(x=>!isNaN(x)))return '北京时间 —';
+  let[y,mo,d]=nd;let[h,mi]=td;
   const off=etDst(y,mo,d)?12:13; let tm=h*60+mi+off*60; let day=Date.UTC(y,mo-1,d)+Math.floor(tm/1440)*864e5; tm%=1440;
   const dt=new Date(day);
   return `北京时间 ${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')} ${String(Math.floor(tm/60)).padStart(2,'0')}:${String(tm%60).padStart(2,'0')}`;
@@ -702,7 +708,10 @@ function loadIdxState(){
 loadIdxState();
 
 function marketState(){
-  const et=quote.timeET||'';const[n,t]=et.split(' ');const[y,mo,d]=n.split('-').map(Number);const[h,mi]=t.split(':').map(Number);
+  const et=quote.timeET||'';
+  const parts=et.split(' ');
+  if(parts.length<2)return{cls:'closed',txt:'—',sub:'等待行情'};
+  const[n,t]=parts;const[y,mo,d]=n.split('-').map(Number);const[h,mi]=t.split(':').map(Number);
   const wd=new Date(Date.UTC(y,mo-1,d)).getUTCDay();
   const mins=h*60+mi, lastDay=days[days.length-1], curDay=Math.floor(Date.UTC(y,mo-1,d)/864e5);
   if(wd===0||wd===6)return{cls:'closed',txt:'休市',sub:`周末 · 显示最近收盘`};
@@ -773,9 +782,10 @@ function renderQuote(){
   $('qOpen').textContent=fmt(quote.o);$('qHigh').textContent=fmt(quote.h);$('qLow').textContent=fmt(quote.l);$('qPrev').textContent=fmt(quote.pc);
   const st=marketState();
   const m=$('mkt');m.textContent=st.txt;m.className='mkt '+st.cls;
-  const et=quote.timeET;
-  $('qTime').textContent=`美东时间 ${et.slice(5,16)} · ${st.sub}`;
-  $('qTimeBJ').textContent=etToBJ(et)+(liveOK?' · 实时':' · 快照');
+  /* 防御：行情源偶发缺少 timeET 时不能让整个渲染链中断（否则后面对比栏等都不刷新） */
+  const et=quote.timeET||'';
+  $('qTime').textContent=et?`美东时间 ${et.slice(5,16)} · ${st.sub}`:`美东时间 — · ${st.sub}`;
+  $('qTimeBJ').textContent=et?(etToBJ(et)+(liveOK?' · 实时':' · 快照')):'—';
 }
 /* ================= 渲染：评分（首页摘要 + 研判详情） ================= */
 function renderScore(){
@@ -1843,7 +1853,7 @@ function loadTencent(cb){
             try{applyEtfQ(code,f);}catch(e){}
           }
         });
-        if(qok){renderQuote();renderScore();renderLedger();renderCal();if(curTab==='home')drawChart();}
+        if(qok){renderQuote();renderScore();renderLedger();renderCal();renderOverview();renderIdxSwitch();if(curTab==='home')drawChart();}
         cb&&cb(qok, qok?'':(text?'解析无有效行情数据':'空响应'));
       }else{
         cb&&cb(false,'HTTP'+st);
@@ -1872,7 +1882,15 @@ function refreshAll(manual){
   /* 性能优化：新闻仅在「资讯」页才拉取，首屏不再预取 ~90KB 的新浪/金十数据 */
   if(curTab==='news'){loadJin10();loadSina();}
 }
-/* 双指数概览卡：两行，各自算一次评分，点一行切换指数 */
+/* 双指数概览卡：两行，各自算一次评分，点一行切换指数
+ *
+ * 数据来源说明（修复"对比栏数据不更新"）：
+ *   历史收盘价来自内置快照 SNAP.idx（只用于算 5年分位/评分），
+ *   但"最新价 + 涨跌幅"应优先用实时行情：
+ *     - 当前指数：直接用全局 live quote（quote.p / quote.chp，随 refreshAll 更新）
+ *     - 另一指数：用 SNAP.idx[k].quote（构建时的收盘价与涨跌）
+ *   并且 refreshAll 拉完实时行情后会重渲染本函数，不再只在启动时渲染一次。
+ */
 function renderOverview(){
   const box=$('ovList');if(!box)return;
   let html='';
@@ -1880,18 +1898,30 @@ function renderOverview(){
     const cfg=IDX_CFG[k], s=(SNAP.idx||{})[k]||{};
     const cs=s.closes||[], ds=s.days||[];
     if(!cs.length)return;
+    const isCur=(k===curIdxKey);
+    /* 历史序列：当前指数用页面内的动态数组（refreshAll 会追加当日收盘），另一指数用快照 */
+    const calcCs=(isCur&&closes&&closes.length>=cs.length)?closes:cs;
+    const calcDs=(isCur&&days&&days.length>=ds.length)?days:ds;
     let r,g;
-    try{ r=computeAll(cs,ds,cfg.ddScale||cfg.ddScale); g=grade(r.total); }
+    try{ r=computeAll(calcCs,calcDs,cfg.ddScale); g=grade(r.total); }
     catch(e){ return; }
-    const q=s.quote||{};
-    const chp=(q.chp==null||isNaN(q.chp))?null:Number(q.chp);
+    /* 涨跌幅优先取实时 */
+    let chp=null, curPrice=null;
+    if(isCur&&liveOK&&quote&&quote.p!=null&&!isNaN(quote.p)){
+      curPrice=quote.p;
+      chp=(quote.chp==null||isNaN(quote.chp))?null:Number(quote.chp);
+    }else{
+      const q=s.quote||{};
+      curPrice=(q.p==null?null:q.p);
+      chp=(q.chp==null||isNaN(q.chp))?null:Number(q.chp);
+    }
     const chgCol=chp==null?'var(--txt3)':(chp>=0?'var(--up)':'var(--down)');
-    const on=k===curIdxKey?' on':'';
+    const on=isCur?' on':'';
     html+=`<div class="ovRow${on}" data-i="${k}">
       <span class="ovBar" style="background:${cfg.color}"></span>
       <div class="ovMid">
-        <div class="ovName">${cfg.short}<em>${cfg.code}</em></div>
-        <div class="ovSub">本月第 <b>${r.rank}</b> 便宜 / ${r.mDays} 个交易日 · 5年分位 ${Math.round(r.pct*100)}%</div>
+        <div class="ovName">${cfg.short}<em>${cfg.code}</em>${isCur?'<em class="ovLive">实时</em>':''}</div>
+        <div class="ovSub">本月第 <b>${r.rank}</b> 便宜 / ${r.mDays} 个交易日 · 5年分位 ${Math.round(r.pct*100)}%${curPrice?` · <b>${fmt(curPrice)}</b>`:''}</div>
       </div>
       <div class="ovRight">
         <div class="ovScore" style="color:${g.c}">${Math.round(r.total)}<i>分</i></div>
@@ -2082,7 +2112,7 @@ try{
 /* 注册 Service Worker：stale-while-revalidate 秒开，后台静默检查版本 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js?v=42').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=43').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
