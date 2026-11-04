@@ -696,12 +696,23 @@ function relTime(tm){
 }
 /* ================= 状态（随指数切换整体重载） ================= */
 let days, closes, quote, liveOK=false;
+/* 双指数实时行情缓存：{spx:{p,pc,ch,chp,timeET}, ndx:{...}}
+   用于「双指数对比」栏 —— 两个指数必须同时显示同一个交易日的实时数据，
+   否则切到 A 指数时，B 指数还停在构建快照的昨日收盘，看起来"没更新"。
+   注意：必须在 loadIdxState() 之前声明，否则会触发 TDZ 报错。 */
+let idxQ={};
+/* 两个指数的「已更新序列」缓存：{spx:{days:[],closes:[]}, ndx:{...}}
+   把实时价并进各自的历史序列后缓存，保证对比栏两行都用同一口径算本月排名——
+   否则非当前指数只能读原始快照，盘中会少算"今天"这一档，排名比分母都跟着偏。 */
+let idxSeries={};
 function loadIdxState(){
   const s=SNAPIDX();
   days=(s.days||[]).slice();
   closes=(s.closes||[]).slice();
-  quote={...(s.quote||{})};
-  liveOK=false;
+  /* 优先用已拉到的实时行情作为初始值，避免切换瞬间先闪一下昨天的快照数据 */
+  const rq=idxQ[curIdxKey];
+  quote=rq?{...(s.quote||{}),...rq}:{...(s.quote||{})};
+  liveOK=!!rq;
 }
 loadIdxState();
 
@@ -753,10 +764,15 @@ function computeAll(cs,ds,ddScale){
   const dev=(cur-m200)/m200, s3=Math.max(0,Math.min(100,50-dev*250));
   const peak=Math.max(...cs), dd=(cur-peak)/peak, s4=Math.max(0,Math.min(100,Math.abs(dd)/dds*100));
   const last=dOf(ds[N-1]),mk=last.getUTCFullYear()+'-'+last.getUTCMonth();
+  /* 本月序列：从最新一天往回收集同一自然月的收盘价。
+     注意 cs 的最后一个元素在盘中/收盘后已被 applyQuote 更新为当日实时价，
+     所以 mc[0] 就是"当前价"，不需要再补一条。 */
   const mc=[];for(let i=N-1;i>=0;i--){const dt=dOf(ds[i]);if(dt.getUTCFullYear()+'-'+dt.getUTCMonth()!==mk)break;mc.push(cs[i]);}
   const mLo=Math.min(...mc),mHi=Math.max(...mc);
   const pos=mHi>mLo?(cur-mLo)/(mHi-mLo):0.5, s5=Math.max(0,Math.min(100,(1-pos)*100));
-  const rank=mc.slice().sort((a,b)=>a-b).indexOf(cur)+1;
+  /* 排名口径：本月有多少个交易日收盘价低于当前价，+1 即当前价的名次。
+     用计数而非 indexOf —— 实时价通常不等于任何历史收盘价，indexOf 会返回 -1 导致 rank=0 的错乱。 */
+  let rank=1;for(const v of mc)if(v<cur)rank++;
   const total=0.3*s1+0.2*s2+0.2*s3+0.2*s4+0.1*s5;
   /* 分母与分子(rank)严格同口径：本月「实际有收盘数据的」交易日数，而非日历口径
      ——否则实时日期进入新月而快照滞后时，分母会变成新月的天数，与排序所用的旧月数据错位 */
@@ -1694,33 +1710,48 @@ function renderCalc(){
 $('cRate').addEventListener('input',()=>{renderCalc();userTouchedRate=true;const b=$('cUseJudge');if(b){b.textContent='📊 按研判建议年化';b.classList.remove('on');}});
 $('cUseJudge').addEventListener('click',()=>{userTouchedRate=false;applyJudgeToCalc();});
 /* ================= 实时刷新 ================= */
-function applyQuote(f){
-  const p=+f[3];if(!(p>0))return false;
+/* 解析任意一个指数的行情字段（不写入全局 quote） */
+function parseQuote(f){
+  const p=+f[3];if(!(p>0))return null;
   const q={p,pc:+f[4],o:+f[5],vol:f[6],timeET:f[30],ch:+f[31],chp:+f[32],h:+f[33],l:+f[34]};
-  if(!(q.pc>0)||!q.timeET)return false;
-  quote=q;liveOK=true;
+  if(!(q.pc>0)||!q.timeET)return null;
+  return q;
+}
+/* 把实时价并入某指数的历史序列（就地修改传入的数组）。
+   规则：同一交易日 → 覆盖最后一条；更新的交易日 → 补齐中间漏掉的交易日再追加。
+   对比栏与当前指数共用此函数，保证两行口径完全一致。 */
+function mergeQuoteInto(ds,cs,q){
+  if(!q||!(q.p>0)||!q.timeET)return;
   const[n]=q.timeET.split(' ');const[y,mo,d]=n.split('-').map(Number);
+  if(!(y>2000))return;
   const curDay=Math.floor(Date.UTC(y,mo-1,d)/864e5);
   const wd=new Date(Date.UTC(y,mo-1,d)).getUTCDay();
-  if(wd!==0&&wd!==6){
-    if(curDay===days[days.length-1]){
-      closes[closes.length-1]=Math.round(q.p*100)/100;
-    }else if(curDay>days[days.length-1]){
-      /* 补齐「本月1日→今天」之间漏掉的交易日（用最近已知收盘价近似，今天用真实价），
-         否则快照滞后时本月只有实时更新的当天，导致「本月第几便宜/共N个交易日」严重失真 */
-      const hs=usHolidays(y);
-      const monthStart=Math.floor(Date.UTC(y,mo-1,1)/864e5);
-      let dd=Math.max(days[days.length-1]+1, monthStart);
-      const lastC=closes[closes.length-1];
-      for(; dd<=curDay; dd++){
-        const w=new Date(dd*864e5).getUTCDay();
-        if(w===0||w===6)continue;
-        if(hs.has(y+'-'+mo+'-'+(dd-monthStart+1)))continue;
-        days.push(dd);
-        closes.push(dd===curDay?Math.round(q.p*100)/100:lastC);
-      }
+  if(wd===0||wd===6)return;                 /* 周末行情不并入交易日序列 */
+  const px=Math.round(q.p*100)/100;
+  if(!ds.length){ds.push(curDay);cs.push(px);return;}
+  if(curDay===ds[ds.length-1]){
+    cs[cs.length-1]=px;
+  }else if(curDay>ds[ds.length-1]){
+    /* 补齐「本月1日→今天」之间漏掉的交易日（用最近已知收盘价近似，今天用真实价），
+       否则快照滞后时本月只有实时更新的当天，导致「本月第几便宜/共N个交易日」严重失真 */
+    const hs=usHolidays(y);
+    const monthStart=Math.floor(Date.UTC(y,mo-1,1)/864e5);
+    let dd=Math.max(ds[ds.length-1]+1, monthStart);
+    const lastC=cs[cs.length-1];
+    for(; dd<=curDay; dd++){
+      const w=new Date(dd*864e5).getUTCDay();
+      if(w===0||w===6)continue;
+      if(hs.has(y+'-'+mo+'-'+(dd-monthStart+1)))continue;
+      ds.push(dd);
+      cs.push(dd===curDay?px:lastC);
     }
   }
+}
+function applyQuote(f){
+  const q=parseQuote(f);
+  if(!q)return false;
+  quote=q;liveOK=true;
+  mergeQuoteInto(days,closes,q);
   return true;
 }
 /* 解析场内ETF行情：v_sh513100="1~纳指ETF国泰~513100~2.266~2.220~..."
@@ -1767,10 +1798,17 @@ function loadTencent(cb){
       }
     }
     const codes=[]; for(const c in codeSet)codes.push(c);
-    /* 当前指数的行情符号（纳指 usNDX / 标普 us.INX） */
+    /* 行情符号：当前指数 + 另一个指数（双指数对比栏需要两边都是实时数据） */
     const qsym=IX().tencentSym;
     const qtag='v_'+qsym;
-    const list=[qsym]; for(let i=0;i<codes.length;i++)list.push(symOf(codes[i]));
+    const idxTags={};
+    const list=[qsym];
+    IDX_KEYS.forEach(function(k){
+      const s=IDX_CFG[k].tencentSym;
+      idxTags['v_'+s]=k;
+      if(list.indexOf(s)<0)list.push(s);
+    });
+    for(let i=0;i<codes.length;i++)list.push(symOf(codes[i]));
     const src='https://qt.gtimg.cn/q='+list.join(',')+'&r='+Date.now();
     const xhr=new XMLHttpRequest();
     xhr.open('GET',src,true);
@@ -1788,7 +1826,17 @@ function loadTencent(cb){
           let val=line.slice(i+1).trim();
           if(val.length>1&&val[0]==='"'&&val[val.length-1]==='"')val=val.slice(1,-1);
           const f=val.split('~');
-          if(name===qtag){ try{qok=applyQuote(f);}catch(e){} }
+          if(idxTags[name]){
+            /* 指数行情：当前指数写入全局 quote，另一个只存进 idxQ 供对比栏使用 */
+            const kIdx=idxTags[name];
+            try{
+              const pq=parseQuote(f);
+              if(pq){
+                idxQ[kIdx]=pq;
+                if(kIdx===curIdxKey)qok=applyQuote(f);
+              }
+            }catch(e){}
+          }
           else if(name.indexOf('v_')===0){
             const code=name.slice(2).replace(/^sz|^sh|^us/,'');  /* 兼容美股前缀 usVOO → VOO */
             try{applyEtfQ(code,f);}catch(e){}
@@ -1840,17 +1888,28 @@ function renderOverview(){
     const cs=s.closes||[], ds=s.days||[];
     if(!cs.length)return;
     const isCur=(k===curIdxKey);
-    /* 历史序列：当前指数用页面内的动态数组（refreshAll 会追加当日收盘），另一指数用快照 */
-    const calcCs=(isCur&&closes&&closes.length>=cs.length)?closes:cs;
-    const calcDs=(isCur&&days&&days.length>=ds.length)?days:ds;
+    /* 历史序列：把各自指数的实时价并进去后缓存，两行口径一致（不会一边算今天、一边漏今天） */
+    let ser=idxSeries[k];
+    if(!ser||ser.srcCs!==cs){
+      ser=idxSeries[k]={srcCs:cs, days:ds.slice(), closes:cs.slice()};
+    }
+    if(idxQ[k])mergeQuoteInto(ser.days,ser.closes,idxQ[k]);
+    const calcCs=ser.closes, calcDs=ser.days;
     let r,g;
     try{ r=computeAll(calcCs,calcDs,cfg.ddScale); g=grade(r.total); }
     catch(e){ return; }
-    /* 涨跌幅优先取实时 */
-    let chp=null, curPrice=null;
-    if(isCur&&liveOK&&quote&&quote.p!=null&&!isNaN(quote.p)){
+    /* 涨跌幅/现价：两个指数都优先取本轮实时行情（idxQ），没有才退回快照。
+       这样切换指数时，另一行也是同一交易日的实时数据，不会"变成昨天"。 */
+    let chp=null, curPrice=null, isLive=false;
+    const rq=idxQ[k];
+    if(rq&&rq.p>0){
+      curPrice=rq.p;
+      chp=(rq.chp==null||isNaN(rq.chp))?null:Number(rq.chp);
+      isLive=true;
+    }else if(isCur&&liveOK&&quote&&quote.p!=null&&!isNaN(quote.p)){
       curPrice=quote.p;
       chp=(quote.chp==null||isNaN(quote.chp))?null:Number(quote.chp);
+      isLive=true;
     }else{
       const q=s.quote||{};
       curPrice=(q.p==null?null:q.p);
@@ -1861,7 +1920,7 @@ function renderOverview(){
     html+=`<div class="ovRow${on}" data-i="${k}">
       <span class="ovBar" style="background:${cfg.color}"></span>
       <div class="ovMid">
-        <div class="ovName">${cfg.short}<em>${cfg.code}</em>${isCur?'<em class="ovLive">实时</em>':''}</div>
+        <div class="ovName">${cfg.short}<em>${cfg.code}</em>${isLive?'<em class="ovLive">实时</em>':''}</div>
         <div class="ovSub">本月第 <b>${r.rank}</b> 便宜 / ${r.mDays} 个交易日 · 5年分位 ${Math.round(r.pct*100)}%${curPrice?` · <b>${fmt(curPrice)}</b>`:''}</div>
       </div>
       <div class="ovRight">
@@ -1883,11 +1942,11 @@ function renderIdxSwitch(){
   box.querySelectorAll('button').forEach(b=>{
     b.classList.toggle('on',b.dataset.i===curIdxKey);
   });
-  /* 两个指数的实时涨跌小标 */
+  /* 两个指数的实时涨跌小标（优先本轮实时行情，其次快照） */
   IDX_KEYS.forEach(k=>{
     const el=$('idxPct'+k.charAt(0).toUpperCase()+k.slice(1));if(!el)return;
-    const s=(SNAP.idx||{})[k]||{};
-    const chp=(s.quote||{}).chp;
+    const rq=idxQ[k];
+    const chp=(rq&&rq.p>0)?rq.chp:((SNAP.idx||{})[k]||{}).quote?.chp;
     if(chp==null||isNaN(chp)){el.textContent='';return;}
     el.textContent=(chp>=0?'+':'')+Number(chp).toFixed(2)+'%';
     el.style.color=chp>=0?'var(--up)':'var(--down)';
