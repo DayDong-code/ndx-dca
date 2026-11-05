@@ -8,7 +8,7 @@
      的 stale-while-revalidate 策略打架，导致每次进入都强制走网络。
      现在统一由 sw.js 控制缓存，HTML 只保留资源本身的 max-age。 -->
 <meta name="theme-color" content="#1677ff">
-<meta name="x-app-ver" content="2026.11.04">
+<meta name="x-app-ver" content="2026.11.05">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -2098,7 +2098,7 @@ try{
 /* 注册 Service Worker：stale-while-revalidate 秒开，后台静默检查版本 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js?v=47').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=48').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
