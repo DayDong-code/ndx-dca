@@ -2098,7 +2098,7 @@ try{
 /* 注册 Service Worker：stale-while-revalidate 秒开，后台静默检查版本 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js?v=54').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=55').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
