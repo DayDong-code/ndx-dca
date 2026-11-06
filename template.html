@@ -8,7 +8,7 @@
      的 stale-while-revalidate 策略打架，导致每次进入都强制走网络。
      现在统一由 sw.js 控制缓存，HTML 只保留资源本身的 max-age。 -->
 <meta name="theme-color" content="#1677ff">
-<meta name="x-app-ver" content="2026.11.06">
+<meta name="x-app-ver" content="2026.11.07">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -582,7 +582,7 @@ footer .src a{color:var(--txt2);margin:0 3px}
     </div>
     <div class="fi2">
       <div class="fi"><label>成交金额（$）</label><input id="fAmt" type="number" step="0.01" placeholder="如 5802.50"></div>
-      <div class="fi"><label>佣金（$）</label><input id="fFee" type="number" step="0.01" value="1" placeholder="1"></div>
+      <div class="fi"><label>佣金（$）</label><input id="fFee" type="number" step="0.01" placeholder="0"></div>
     </div>
     <div class="fi2">
       <div class="fi"><label>备注（选填）</label><input id="fNote" placeholder="如：发薪日定投" maxlength="30"></div>
@@ -625,14 +625,14 @@ const IDX_CFG = {
     key:'ndx', name:'纳斯达克100', short:'纳指100', code:'.NDX',
     tencentSym:'usNDX', color:'#2C8AFF', colorDim:'rgba(44,138,255,.12)',
     hkey:'us_ndx_ledger_v1',   /* 美股账本新键：换键即旧国内账本自动作废 */
-    ddScale:0.3556,
+    ddScale:0.3556, defEtf:'QQQM',
     etfs:{'QQQ':'Invesco 纳指100ETF','QQQM':'Invesco 纳指100ETF（低费率）'},
   },
   spx: {
     key:'spx', name:'标普500', short:'标普500', code:'.INX',
     tencentSym:'us.INX', color:'#F08A24', colorDim:'rgba(240,138,36,.12)',
     hkey:'us_spx_ledger_v1',
-    ddScale:0.2543,
+    ddScale:0.2543, defEtf:'VOO',
     etfs:{'VOO':'Vanguard 标普500ETF','IVV':'iShares 标普500ETF'},
   },
 };
@@ -1388,10 +1388,11 @@ function openModal(r){
   $('mTitle').textContent=(editIdx>=0?'编辑':'记一笔')+(type==='S'?'卖出':'买入');
   $('fDate').value=r?r.d:todayStr();$('fDate').max=todayStr();
   const known=r&&etfsOf()[r.code]?r.code:'';
-  /* 默认选中的ETF：编辑时用原代码；新建时优先级 = 已聚焦ETF > VOO > 该指数清单首项 */
+  /* 默认选中的ETF：编辑时用原代码；新建时优先级 = 已聚焦ETF > 指数配置的defEtf > 清单首项 */
   const defEtf=(function(){
     const m=etfsOf();
-    for(const c in m){ if(c==='VOO') return c; }
+    const d=IDX_CFG[curIdxKey].defEtf;
+    if(d&&m[d])return d;
     for(const c in m){ return c; }
     return '';
   })();
@@ -1401,7 +1402,7 @@ function openModal(r){
   $('fPrice').value=r?r.price:'';
   $('fShare').value=r?r.share:'';
   $('fAmt').value=r?r.amt:'';
-  $('fFee').value=r?(r.fee||0):1;
+  $('fFee').value=r?(r.fee||0):'';
   $('fNote').value=r?(r.note||''):'';
   /* 新建买入时若该ETF有实时价，自动填成交价（股数不预填，留空由用户手填） */
   if(!r&&type==='B'){
@@ -2098,7 +2099,7 @@ try{
 /* 注册 Service Worker：stale-while-revalidate 秒开，后台静默检查版本 */
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
-    navigator.serviceWorker.register('./sw.js?v=58').catch(()=>{});
+    navigator.serviceWorker.register('./sw.js?v=47').catch(()=>{});
     let reloading=false;
     const doReload=()=>{ if(!reloading){reloading=true;location.reload();} };
     navigator.serviceWorker.addEventListener('controllerchange',doReload);
