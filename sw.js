@@ -1,4 +1,4 @@
-/* 纳指100定投工作台 Service Worker  v81
+/* 纳指100定投工作台 Service Worker  v82
  *
  * v39 性能重构（解决"从桌面进入要等很久"）：
  *   旧策略：导航请求 fetch(cache:'no-store') + Date.now() 破缓存参数 → 每次进入必然完整重下 ~413KB。
@@ -9,7 +9,7 @@
  *     3. 静态资源（图标/manifest/news.json）cache-first + 后台更新。
  *     4. 保留 v38 的强制换页能力：新 SW 激活时 navigate 已打开页面，确保不卡旧版。
  */
-const CACHE = 'ndx-dca-v81';
+const CACHE = 'ndx-dca-v82';
 const HTML = '/ndx-dca/';
 const HTML_FILE = '/ndx-dca/index.html';
 const CORE = [HTML_FILE, '/ndx-dca/manifest.json', '/ndx-dca/icon-180.webp', '/ndx-dca/icon-192.webp'];
